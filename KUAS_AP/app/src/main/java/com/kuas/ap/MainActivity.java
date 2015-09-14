@@ -1,17 +1,18 @@
 package com.kuas.ap;
 
 import android.annotation.TargetApi;
-import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -28,12 +29,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -43,10 +44,17 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ViewFlipper;
 
 import com.alertdialogpro.AlertDialogPro;
-import com.alertdialogpro.ProgressDialogPro;
+import com.daimajia.androidanimations.library.Techniques;
+import com.daimajia.androidanimations.library.YoYo;
 import com.eftimoff.androipathview.PathView;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
 import com.roomorama.caldroid.CaldroidFragment;
 import com.roomorama.caldroid.CaldroidListener;
 
@@ -63,7 +71,10 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.CoreProtocolPNames;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
@@ -94,6 +105,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -104,6 +116,7 @@ import static android.view.Gravity.START;
 
 public class MainActivity extends ActionBarActivity {
     public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0";
+    public static final int TIME_OUT = 3000;
     String BusJs = "function baseEncryption(e) {function h(b, a) { var d, c, e, f, g; e = b & 2147483648; f = a & 2147483648; d = b & 1073741824; c = a & 1073741824; g = (b & 1073741823) + (a & 1073741823); return d & c ? g ^ 2147483648 ^ e ^ f : d | c ? g & 1073741824 ? g ^ 3221225472 ^ e ^ f : g ^ 1073741824 ^ e ^ f : g ^ e ^ f } function g(b, a, d, c, e, f, g) { b = h(b, h(h(a & d | ~a & c, e), g)); return h(b << f | b >>> 32 - f, a) } function i(b, a, d, c, e, f, g) { b = h(b, h(h(a & c | d & ~c, e), g)); return h(b << f | b >>> 32 - f, a) } function j(b, a, c, d, e, f, g) { b = h(b, h(h(a ^ c ^ d, e), g)); return h(b << f | b >>> 32 - f, a) } function k(b, a, c, d, e, f, g) {b = h(b, h(h(c ^(a | ~d), e), g)); return h(b << f | b >>> 32 - f, a)} function l(b) { var a = \"\", c = \"\", d; for (d = 0; 3 >= d; d++) c = b >>> 8 * d & 255, c = \"0\" + c.toString(16), a += c.substr(c.length - 2, 2); return a } var f = [], m, n, o, p, b, a, d, c, f = function (b) { var a, c = b.length; a = c + 8; for (var d = 16 * ((a - a % 64) / 64 + 1), e = Array(d - 1), f = 0, g = 0; g < c; ) a = (g - g % 4) / 4, f = 8 * (g % 4), e[a] |= b.charCodeAt(g) << f, g++; a = (g - g % 4) / 4; e[a] |= 128 << 8 * (g % 4); e[d - 2] = c << 3; e[d - 1] = c >>> 29; return e } (e); b = 1732584193; a = 4023233417; d = 2562383102; c = 271733878; for (e = 0; e < f.length; e += 16) m = b, n = a, o = d, p = c, b = g(b, a, d, c, f[e +0], 7, 3614090360), c = g(c, b, a, d, f[e + 1], 12, 3905402710), d = g(d, c, b, a, f[e + 2], 17, 606105819), a = g(a, d, c, b, f[e + 3], 22, 3250441966), b = g(b, a, d, c, f[e + 4], 7, 4118548399), c = g(c, b, a, d, f[e + 5], 12, 1200080426), d = g(d, c, b, a, f[e + 6], 17, 2821735955), a = g(a, d, c, b, f[e + 7], 22, 4249261313), b = g(b, a, d, c, f[e + 8], 7, 1770035416), c = g(c, b, a, d, f[e + 9], 12, 2336552879), d = g(d, c, b, a, f[e + 10], 17, 4294925233), a = g(a, d, c, b, f[e + 11], 22, 2304563134), b = g(b, a, d, c, f[e + 12], 7, 1804603682), c = g(c, b, a, d, f[e + 13], 12, 4254626195), d = g(d, c, b, a, f[e + 14], 17, 2792965006), a = g(a, d,c, b, f[e + 15], 22, 1236535329), b = i(b, a, d, c, f[e + 1], 5, 4129170786), c = i(c, b, a, d, f[e + 6], 9, 3225465664), d = i(d, c, b, a, f[e + 11], 14, 643717713), a = i(a, d, c, b, f[e + 0], 20, 3921069994), b = i(b, a, d, c, f[e + 5], 5, 3593408605), c = i(c, b, a, d, f[e + 10], 9, 38016083), d = i(d, c, b, a, f[e + 15], 14, 3634488961), a = i(a, d, c, b, f[e + 4], 20, 3889429448), b = i(b, a, d, c, f[e + 9], 5, 568446438), c = i(c, b, a, d, f[e + 14], 9, 3275163606), d = i(d, c, b, a, f[e + 3], 14, 4107603335), a = i(a, d, c, b, f[e + 8], 20, 1163531501), b = i(b, a, d, c, f[e + 13], 5, 2850285829), c = i(c, b, a, d, f[e + 2], 9, 4243563512), d = i(d,c, b, a, f[e + 7], 14, 1735328473), a = i(a, d, c, b, f[e + 12], 20, 2368359562), b = j(b, a, d, c, f[e + 5], 4, 4294588738), c = j(c, b, a, d, f[e + 8], 11, 2272392833), d = j(d, c, b, a, f[e + 11], 16, 1839030562), a = j(a, d, c, b, f[e + 14], 23, 4259657740), b = j(b, a, d, c, f[e + 1], 4, 2763975236), c = j(c, b, a, d, f[e + 4], 11, 1272893353), d = j(d, c, b, a, f[e + 7], 16, 4139469664), a = j(a, d, c, b, f[e + 10], 23, 3200236656), b = j(b, a, d, c, f[e + 13], 4, 681279174), c = j(c, b, a, d, f[e + 0], 11, 3936430074), d = j(d, c, b, a, f[e + 3], 16, 3572445317), a = j(a, d, c, b, f[e + 6], 23, 76029189), b = j(b, a, d, c, f[e + 9], 4, 3654602809),c = j(c, b, a, d, f[e + 12], 11, 3873151461), d = j(d, c, b, a, f[e + 15], 16, 530742520), a = j(a, d, c, b, f[e + 2], 23, 3299628645), b = k(b, a, d, c, f[e + 0], 6, 4096336452), c = k(c, b, a, d, f[e + 7], 10, 1126891415), d = k(d, c, b, a, f[e + 14], 15, 2878612391), a = k(a, d, c, b, f[e + 5], 21, 4237533241), b = k(b, a, d, c, f[e + 12], 6, 1700485571), c = k(c, b, a, d, f[e + 3], 10, 2399980690), d = k(d, c, b, a, f[e + 10], 15, 4293915773), a = k(a, d, c, b, f[e + 1], 21, 2240044497), b = k(b, a, d, c, f[e + 8], 6, 1873313359), c = k(c, b, a, d, f[e + 15], 10, 4264355552), d = k(d, c, b, a, f[e + 6], 15, 2734768916), a = k(a, d, c, b, f[e + 13], 21,1309151649), b = k(b, a, d, c, f[e + 4], 6, 4149444226), c = k(c, b, a, d, f[e + 11], 10, 3174756917), d = k(d, c, b, a, f[e + 2], 15, 718787259), a = k(a, d, c, b, f[e + 9], 21, 3951481745), b = h(b, m), a = h(a, n), d = h(d, o), c = h(c, p); return (l(b) + l(a) + l(d) + l(c)).toLowerCase()}loginEncryption = function (e, h) {var g = Math.floor(1163531501 * Math.random()) + 15441, i = Math.floor(1163531502 * Math.random()) + 0, j = Math.floor(1163531502 * Math.random()) + 0, k = Math.floor(1163531502 * Math.random()) + 0, g = baseEncryption(\"J\" + g), i = baseEncryption(\"E\" + i), j = baseEncryption(\"R\" + j), k = baseEncryption(\"Y\" + k), e = baseEncryption(e + encA1(g)), h = baseEncryption(e + h + \"JERRY\" + encA1(i)), l = baseEncryption(e + h + \"KUAS\" + encA1(j)), l = baseEncryption(l + e + encA1(\"ITALAB\") + encA1(k)), l = baseEncryption(l + h + \"MIS\" + k); return '{ a:\"' + l + '\",b:\"' +g + '\",c:\"' + i + '\",d:\"' + j + '\",e:\"' + k + '\",f:\"' + h + '\" }'}; function encA2(e) { return baseEncryption(e) };";
     CookieStore cookieStore = new BasicCookieStore();
     private String _loginUrl = "http://140.127.113.231/kuas/perchk.jsp";
@@ -117,7 +130,13 @@ public class MainActivity extends ActionBarActivity {
     private String Uid = "";
     private String Pwd = "";
 
+    private int LayoutId = R.layout.login;
+    private int SelectLayoutId = R.layout.course;
+
+    // Server
     private String api_server = "http://kuas.grd.idv.tw:14768/";
+    private String _api = "http://kuas.grd.idv.tw:14768/";
+    private String _backup = "http://api.grd.idv.tw:14768/";
 
     private String ymsScore = "";
 
@@ -130,6 +149,7 @@ public class MainActivity extends ActionBarActivity {
     public static final int LoginInit = -1;
     public static final int LoginSuccess = 2;
     public static final int LoginError = 1;
+    public static final int LoginError2 = 3;
 
     Runnable ReadSemesterRunnable;
 
@@ -140,7 +160,11 @@ public class MainActivity extends ActionBarActivity {
     private boolean _isLogin = false;
     private boolean OnCreateCheck = false;
 
+    private ViewFlipper mViewFlipper;
+
     // Server Status
+    Runnable CheckFixedRunnable;
+    Runnable CheckBackUpRunnable;
     Runnable CheckServerStatusRunnable;
     boolean ap_status = false;
     boolean leave_status = false;
@@ -150,9 +174,12 @@ public class MainActivity extends ActionBarActivity {
     private EditText UserNameEditText;
     private EditText PasswordEditText;
     private Button SignInButton;
-    private CheckBox RememberPass;
+    private com.rey.material.widget.CheckBox RememberPass;
     Runnable LoginRunnable;
-    AlertDialog LoadingDialog;
+
+    // Loading Dialog
+    private boolean LoadingDialogIsShow = false;
+    String LoadingDialogTitle = "Login";
 
     // Score
     Runnable ReadScoreRunnable;
@@ -221,6 +248,7 @@ public class MainActivity extends ActionBarActivity {
     String SimCourseSearchData = "";
     Integer SimCourseReadCourseType = 1;
     boolean SimCourseChange = false;
+    int SimCourseSelectDepartment = 1;
 
     // About
     int AboutEasterEgg = 0;
@@ -228,6 +256,7 @@ public class MainActivity extends ActionBarActivity {
 
     // News
     Integer news_id = -1;
+    String NewsData = "";
     Runnable newsRunnable;
 
     // Version
@@ -235,6 +264,11 @@ public class MainActivity extends ActionBarActivity {
 
     // Select
     boolean isSelecting = false;
+
+    // User
+    Runnable ReadUserInfoRunnable;
+    String stuID;
+    int UserPicIndex = 0;
 
     // Debug
     public static final boolean NewsDebug = false;
@@ -253,7 +287,7 @@ public class MainActivity extends ActionBarActivity {
                 try {
                     LoadingDialogHandler.sendEmptyMessage(-1);
 
-                    if (!CheckLoginState())
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -347,6 +381,31 @@ public class MainActivity extends ActionBarActivity {
             }
         };
 
+        CheckBackUpRunnable = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    CheckBackup();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        CheckFixedRunnable = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Message msg = new Message();
+                    msg.obj = CheckFixed();
+                    msg.what = 1;
+                    CheckFixedHandler.sendMessage(msg);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
         checkVersionRunnable = new Runnable() {
             @Override
             public void run() {
@@ -369,15 +428,274 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+    void changeUserPic()
+    {
+        switch (UserPicIndex)
+        {
+            case 0:
+                findViewById(R.id.pic).setBackgroundResource(R.drawable.tablelayout_oneitem_left_green);
+                findViewById(R.id.qr_code).setBackgroundResource(R.drawable.tablelayout_oneitem_center_blue);
+                findViewById(R.id.bar_code).setBackgroundResource(R.drawable.tablelayout_oneitem_right_blue);
+                break;
+            case 1:
+                findViewById(R.id.pic).setBackgroundResource(R.drawable.tablelayout_oneitem_left_blue);
+                findViewById(R.id.qr_code).setBackgroundResource(R.drawable.tablelayout_oneitem_center_green);
+                findViewById(R.id.bar_code).setBackgroundResource(R.drawable.tablelayout_oneitem_right_blue);
+                break;
+            case 2:
+                findViewById(R.id.pic).setBackgroundResource(R.drawable.tablelayout_oneitem_left_blue);
+                findViewById(R.id.qr_code).setBackgroundResource(R.drawable.tablelayout_oneitem_center_blue);
+                findViewById(R.id.bar_code).setBackgroundResource(R.drawable.tablelayout_oneitem_right_green);
+                break;
+        }
+    }
+
+    void initUser(){
+        setContentViewEx(R.layout.user);
+
+        initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "校園資訊")), new String[]{ "關於我們" }, true, true);
+
+        UserPicIndex = 0;
+
+        findViewById(R.id.pic).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (UserPicIndex == 0)
+                    return;
+                UserPicIndex = 0;
+                changeUserPic();
+                try {
+                    if (CheckLoginState() != 1)
+                    {
+                        if (!ReLogin())
+                        {
+                            ReLoginHandler.sendEmptyMessage(-1);
+                            return;
+                        }
+                    }
+
+                    ((ImageView) findViewById(R.id.picture)).setImageBitmap(getBitmapFromURL(get_url_contents(api_server + "ap/user/picture", null, cookieStore)));
+                } catch (Exception e) {
+                    Toast.makeText(getApplicationContext(), "網路不穩定問題，請稍候嘗試...", Toast.LENGTH_SHORT).show();
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        findViewById(R.id.qr_code).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (UserPicIndex == 1)
+                    return;
+                UserPicIndex = 1;
+                changeUserPic();
+                try {
+                    ((ImageView) findViewById(R.id.picture)).setImageBitmap(encodeAsBitmap(stuID, BarcodeFormat.QR_CODE, 500, 500));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        findViewById(R.id.bar_code).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (UserPicIndex == 2)
+                    return;
+                UserPicIndex = 2;
+                changeUserPic();
+                try {
+                    ((ImageView) findViewById(R.id.picture)).setImageBitmap(encodeAsBitmap(stuID, BarcodeFormat.CODE_39, 1000, 200));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        _fncid = "";
+        ReadUserInfoRunnable = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (CheckLoginState() != 1)
+                    {
+                        if (!ReLogin())
+                        {
+                            ReLoginHandler.sendEmptyMessage(-1);
+                            return;
+                        }
+                    }
+
+                    try {
+                        final JSONObject jsonObj = new JSONObject(get_url_contents(api_server + "ap/user/info", null, cookieStore));
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    stuID = jsonObj.getString("student_id");
+                                    ((TextView) findViewById(R.id.education)).setText("學制：" + jsonObj.getString("education_system"));
+                                    ((TextView) findViewById(R.id.id)).setText("學號：" + jsonObj.getString("student_id"));
+                                    ((TextView) findViewById(R.id.department)).setText("科系：" + jsonObj.getString("department"));
+                                    ((TextView) findViewById(R.id.stuClass)).setText("班級：" + jsonObj.getString("class"));
+                                    ((TextView) findViewById(R.id.userName)).setText(jsonObj.getString("student_name_cht"));
+                                    ((ImageView) findViewById(R.id.picture)).setImageBitmap(getBitmapFromURL(get_url_contents(api_server + "ap/user/picture", null, cookieStore)));
+                                    LoadingDialogHandler.sendEmptyMessage(1);
+                                } catch (Exception e) {
+
+                                }
+                            }
+                        });
+                    } catch (Exception e) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                LoadingDialogHandler.sendEmptyMessage(1);
+                                Toast.makeText(getApplicationContext(), "網路不穩定問題，請稍候嘗試...", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                        e.printStackTrace();
+                    }
+                } catch (Exception e) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            LoadingDialogHandler.sendEmptyMessage(1);
+                            Toast.makeText(getApplicationContext(), "網路不穩定問題，請稍候嘗試...", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        LoadingDialogHandler.sendEmptyMessage(-1);
+        new Thread(ReadUserInfoRunnable).start();
+    }
+
+    public static Bitmap encodeAsBitmap(String contents, BarcodeFormat format, int desiredWidth, int desiredHeight) throws WriterException
+    {
+        if (contents.length() == 0) return null;
+        final int WHITE = 0xFFFFFFFF;
+        final int BLACK = 0xFF000000;
+        HashMap<EncodeHintType, String> hints = null;
+        String encoding = null;
+        for (int i = 0; i < contents.length(); i++)
+        {
+            if (contents.charAt(i) > 0xFF)
+            {
+                encoding = "UTF-8";
+                break;
+            }
+        }
+        if (encoding != null)
+        {
+            hints = new HashMap<>(2);
+            hints.put(EncodeHintType.CHARACTER_SET, encoding);
+        }
+        MultiFormatWriter writer = new MultiFormatWriter();
+        BitMatrix result = writer.encode(contents, format, desiredWidth, desiredHeight, hints);
+        int width = result.getWidth();
+        int height = result.getHeight();
+        int[] pixels = new int[width * height];
+        for (int y = 0; y < height; y++)
+        {
+            int offset = y * width;
+            for (int x = 0; x < width; x++)
+            {
+                pixels[offset + x] = result.get(x, y) ? BLACK : WHITE;
+            }
+        }
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
+        return bitmap;
+    }
+
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if ((keyCode == KeyEvent.KEYCODE_BACK)) {
-            if (_isLogin)
-                initLogout();
+            AlertDialogPro.Builder builder;
+            if (LayoutId == R.layout.login)
+            {
+                builder = CustomDialog("", "是否要離開高應校務通？", false);
+                builder.setCancelable(false).setPositiveButton("確定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                }).setNegativeButton("取消", null).show();
+            }
+            else if (LayoutId == R.layout.logout || LayoutId == R.layout.logout_news)
+            {
+                builder = CustomDialog("", "是否要登出？", false);
+                builder.setCancelable(false).setPositiveButton("確定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        cookieStore = new BasicCookieStore();
+                        initLogin();
+                    }
+                }).setNegativeButton("返回", null).show();
+            }
+            else if (isSelecting)
+            {
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_down_out));
+                mViewFlipper.setDisplayedChild(0);
+                if (SelectLayoutId == R.layout.course)
+                    initCourse(true, true, true);
+                else if (SelectLayoutId == R.layout.score)
+                    initScore(true, true);
+                else if (SelectLayoutId == R.layout.leave)
+                    initLeave1(true, true);
+            }
             else
-                initLogin();
+            {
+                switch (LayoutId)
+                {
+                    case R.layout.simcourse_search:
+                        if (SimCourseSelectDepartment == 1)
+                        {
+                            mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                            mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_down_out));
+                            mViewFlipper.setDisplayedChild(1);
+                            initSimCourseSearch1(false, false);
+                        }
+                        else if (SimCourseSelectDepartment == 0)
+                            initSimCourse(false, true);
+                        else
+                            initSimCourseSelectDepartment1();
+                        break;
+                    default:
+                        if (_isLogin)
+                            initLogout();
+                        else
+                            initLogin();
+                        break;
+                }
+            }
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    private void CheckBackup()
+    {
+        try{
+            if (get_url_contents(_backup + "backup", null, cookieStore).equals("1"))
+                api_server = _backup;
+            else
+                api_server = _api;
+        } catch (Exception e) {
+            api_server = _api;
+        }
+    }
+
+    private String CheckFixed()
+    {
+        try{
+            return get_url_contents(_api + "fixed", null, cookieStore);
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     public boolean CheckVersion()
@@ -425,7 +743,7 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    public Boolean CheckLoginState()
+    public int CheckLoginState()
     {
         try {
             // Cilent
@@ -438,12 +756,15 @@ public class MainActivity extends ActionBarActivity {
             */
 
             // Server
-            if (post_url_contents(api_server + "ap/is_login", null, cookieStore).equals("true"))
-                return true;
+            String data = post_url_contents(api_server + "ap/is_login", null, cookieStore);
+            if (data.equals("true"))
+                return 1;
+            else if (data.equals(""))
+                return -1;
             else
-                return false;
+                return 0;
         } catch (Exception e) {
-            return false;
+            return -1;
         }
     }
 
@@ -462,7 +783,7 @@ public class MainActivity extends ActionBarActivity {
         params.add(new BasicNameValuePair("username", UserNameEditText.getText().toString()));
         params.add(new BasicNameValuePair("password", PasswordEditText.getText().toString()));
         post_url_contents(api_server + "ap/login", params, cookieStore);
-        return CheckLoginState();
+        return CheckLoginState() == 1;
     }
 
     public void initServerStatus(){
@@ -489,7 +810,10 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void initLogin(){
-        setContentView(R.layout.login);
+        setContentViewEx(R.layout.login);
+
+        new Thread(CheckBackUpRunnable).start();
+        new Thread(CheckFixedRunnable).start();
 
         _isLogin = false;
 
@@ -497,24 +821,15 @@ public class MainActivity extends ActionBarActivity {
         UserNameEditText = (EditText) findViewById(R.id.Username);
         PasswordEditText = (EditText) findViewById(R.id.Password);
         SignInButton = (Button) findViewById(R.id.SignIn);
-        RememberPass = (CheckBox) findViewById(R.id.RememberPass);
+        RememberPass = (com.rey.material.widget.CheckBox) findViewById(R.id.RememberPass);
+
+        if (!OnCreateCheck)
+            YoYo.with(Techniques.FadeIn).duration(1500).playOn(findViewById(R.id.kuasapText));
 
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
 
-        LoadingDialog = new ProgressDialogPro(this, R.style.Theme_AlertDialogPro_Material_Light);
 
-        SignInButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(UserNameEditText.getWindowToken(), 0);
-                imm.hideSoftInputFromWindow(PasswordEditText.getWindowToken(), 0);
-
-                new Thread(LoginRunnable).start();
-            }
-        });
-
-        initDrawer(new String[]{ "離線課表", "校園資訊" }, new String[]{ "關於我們" }, false, false);
+        initDrawer(new ArrayList<>(Arrays.asList("離線課表", "校園資訊")), new String[]{ "關於我們" }, false, false);
 
         restorePrefs();
 
@@ -535,24 +850,64 @@ public class MainActivity extends ActionBarActivity {
                     params.add(new BasicNameValuePair("username", UserNameEditText.getText().toString()));
                     params.add(new BasicNameValuePair("password", PasswordEditText.getText().toString()));
                     post_url_contents(api_server + "ap/login", params, cookieStore);
-                    if (CheckLoginState())
+                    if (CheckLoginState() == 1)
                     {
                         Uid = UserNameEditText.getText().toString();
                         Pwd =  PasswordEditText.getText().toString();
                         savePrefs();
                         LoginHandler.sendEmptyMessage(LoginSuccess);
                     }
-                    else
+                    else if (CheckLoginState() == 0)
                     {
                         LoginHandler.sendEmptyMessage(LoginError);
                         System.out.println("Error");
                     }
+                    else
+                    {
+                        LoginHandler.sendEmptyMessage(LoginError2);
+                    }
                 } catch (Exception e) {
-                    LoginHandler.sendEmptyMessage(LoginError);
+                    LoginHandler.sendEmptyMessage(LoginError2);
                     e.printStackTrace();
                 }
             }
         };
+
+        SignInButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(UserNameEditText.getWindowToken(), 0);
+                imm.hideSoftInputFromWindow(PasswordEditText.getWindowToken(), 0);
+
+                UserNameEditText.setBackgroundResource(R.drawable.login_table_top);
+                PasswordEditText.setBackgroundResource(R.drawable.login_table_bottom);
+
+                if (UserNameEditText.getText().toString().equals("") || PasswordEditText.getText().toString().equals("")) {
+                    Toast.makeText(getApplicationContext(), "帳號或密碼不得為空", Toast.LENGTH_SHORT).show();
+                    UserNameEditText.setBackgroundResource(R.drawable.login_table_top_red);
+                    PasswordEditText.setBackgroundResource(R.drawable.login_table_bottom_red);
+                    YoYo.with(Techniques.Shake).duration(700).playOn(findViewById(R.id.tablelayout));
+                } else
+                    new Thread(LoginRunnable).start();
+            }
+        });
+
+        UserNameEditText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                UserNameEditText.setBackgroundResource(R.drawable.login_table_top);
+                PasswordEditText.setBackgroundResource(R.drawable.login_table_bottom);
+            }
+        });
+
+        PasswordEditText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                UserNameEditText.setBackgroundResource(R.drawable.login_table_top);
+                PasswordEditText.setBackgroundResource(R.drawable.login_table_bottom);
+            }
+        });
 
         try{
             PackageInfo pkgInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
@@ -569,12 +924,44 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void initLogout(){
-        setContentView(R.layout.logout);
+        if (NewsData.equals(""))
+            setContentViewEx(R.layout.logout);
+        else
+        {
+            setContentViewEx(R.layout.logout_news);
+            try {
+                JSONArray jsonObj = new JSONArray(NewsData);
+                WebView newsWeb = (WebView) findViewById(R.id.webView);
+                newsWeb.setBackgroundColor(0);
+                newsWeb.loadDataWithBaseURL("", jsonObj.getString(3), "text/html", "UTF-8", "");
+                ((TextView) findViewById(R.id.title)).setText(jsonObj.getString(2));
+                final String Url = jsonObj.getString(4);
+                if (!Url.equals("") && Url.startsWith("http"))
+                {
+                    findViewById(R.id.OpenUrl).setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(Url));
+                            startActivity(browserIntent);
+                        }
+                    });
+                    findViewById(R.id.OpenUrl).setVisibility(View.VISIBLE);
+                }
+                else
+                {
+                    findViewById(R.id.OpenUrl).setVisibility(View.GONE);
+                }
+            } catch (Exception e) {
+                setContentViewEx(R.layout.logout);
+                e.printStackTrace();
+            }
+        }
+
         _fncid = "";
 
         _isLogin = true;
 
-        initDrawer(new String[]{ "學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "校園資訊" }, new String[]{ "關於我們" }, true, false);
+        initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "校園資訊", "個人資訊")), new String[]{"關於我們"}, true, false);
 
         Button Logout = (Button) findViewById(R.id.Logout);
         Logout.setOnClickListener(new View.OnClickListener() {
@@ -584,12 +971,9 @@ public class MainActivity extends ActionBarActivity {
                 initLogin();
             }
         });
-
-        initServerStatus();
     }
 
     public void initSelect(){
-        setContentView(R.layout.select);
         isSelecting = true;
 
         ListView selectListView = (ListView) findViewById(R.id.listView);
@@ -618,9 +1002,15 @@ public class MainActivity extends ActionBarActivity {
                 }
                 holder.textView.setText(SemesterList.get(position));
                 if (SemesterValue.get(position).equals(ymsScore))
+                {
+                    convertView.setBackgroundColor(getResources().getColor(R.color.md_grey_300));
                     holder.imageView.setBackgroundResource(R.drawable.ic_done_black_48dp);
+                }
                 else
+                {
+                    convertView.setBackgroundColor(Color.WHITE);
                     holder.imageView.setBackgroundColor(Color.TRANSPARENT);
+                }
                 return convertView;
             }
         };
@@ -633,11 +1023,14 @@ public class MainActivity extends ActionBarActivity {
                     cancel = true;
                 ymsScore = SemesterValue.get(position);
                 isSelecting = false;
-                if (_fncid.equals("AG222"))
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_down_out));
+                mViewFlipper.setDisplayedChild(0);
+                if (SelectLayoutId == R.layout.course)
                     initCourse(true, cancel, true);
-                else if (_fncid.equals("AG008"))
+                else if (SelectLayoutId == R.layout.score)
                     initScore(true, cancel);
-                else if (_fncid.equals("AK002"))
+                else if (SelectLayoutId == R.layout.leave)
                     initLeave1(true, cancel);
             }
         });
@@ -645,11 +1038,14 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onClick(View v) {
                 isSelecting = false;
-                if (_fncid.equals("AG222"))
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_down_out));
+                mViewFlipper.setDisplayedChild(0);
+                if (SelectLayoutId == R.layout.course)
                     initCourse(true, true, true);
-                else if (_fncid.equals("AG008"))
+                else if (SelectLayoutId == R.layout.score)
                     initScore(true, true);
-                else if (_fncid.equals("AK002"))
+                else if (SelectLayoutId == R.layout.leave)
                     initLeave1(true, true);
             }
         });
@@ -666,34 +1062,68 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void initReLogin(){
-        setContentView(R.layout.relogin);
+        setContentViewEx(R.layout.relogin);
+
+        LoadingDialogHandler.sendEmptyMessage(1);
 
         _isLogin = false;
 
-        initDrawer(new String[]{}, new String[]{}, false, true);
+        initDrawer(new ArrayList<String>(), new String[]{}, false, true);
 
         _fncid = "";
     }
 
-    private void initDrawer(final String[] DrawerListValue, final String[] AboutListValue, final boolean _isLogin , boolean _isLogout)
+    private void initDrawer(final ArrayList<String> DrawerListValue, final String[] AboutListValue, final boolean _isLogin , boolean _isLogout)
     {
+        final String[] List;
         if (_isLogout)
         {
             RelativeLayout Logout = (RelativeLayout) findViewById(R.id.Logout);
             Logout.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (_isLogin)
-                        initLogout();
+                    if (SimCourseChange && LayoutId == R.layout.simcourse)
+                    {
+                        AlertDialogPro.Builder builder = CustomDialog("模擬選課", "尚未儲存變更，是否儲存課表？", false);
+                        builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                SaveSimCourseData();
+                                if (_isLogin)
+                                    initLogout();
+                                else
+                                    initLogin();
+                            }
+                        }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                if (_isLogin)
+                                    initLogout();
+                                else
+                                    initLogin();
+                            }
+                        }).show();
+                    }
                     else
-                        initLogin();
+                    {
+                        if (_isLogin)
+                            initLogout();
+                        else
+                            initLogin();
+                    }
                 }
             });
         }
+
+        if (_isLogin)
+            List = new String[]{ "學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "校園資訊", "個人資訊" };
+        else
+            List = new String[]{ "離線課表", "校園資訊" };
+
         mDrawerList = (ListView)findViewById(R.id.drawerlistView);
         mAboutList = (ListView)findViewById(R.id.aboutlistView);
         ArrayAdapter<String> adapter=new ArrayAdapter<String>(
-                this,R.layout.menulistview_item, DrawerListValue){
+                this,R.layout.menulistview_item, List){
             private LayoutInflater mInflater = LayoutInflater.from(MainActivity.this);
 
             class ViewHolder {
@@ -709,12 +1139,16 @@ public class MainActivity extends ActionBarActivity {
                     holder = new ViewHolder();
                     convertView = mInflater.inflate(R.layout.menulistview_item, null);
                     holder.textView = (TextView) convertView.findViewById(R.id.textView);
+                    if (DrawerListValue.contains(List[position]))
+                        holder.textView.setTextColor(getResources().getColor(R.color.grey));
+                    else
+                        holder.textView.setTextColor(getResources().getColor(R.color.md_grey_700));
                     holder.imageView = (ImageView) convertView.findViewById(R.id.imageView);
                     convertView.setTag(holder);
                 } else {
                     holder = (ViewHolder)convertView.getTag();
                 }
-                holder.textView.setText(DrawerListValue[position]);
+                holder.textView.setText(List[position]);
                 return convertView;
             }
         };
@@ -747,7 +1181,7 @@ public class MainActivity extends ActionBarActivity {
         };
         if (AboutListValue.length != 0)
             mAboutList.setAdapter(aboutadapter);
-        if (DrawerListValue.length != 0)
+        if (DrawerListValue.size() != 0)
             mDrawerList.setAdapter(adapter);
         mAboutList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -760,30 +1194,91 @@ public class MainActivity extends ActionBarActivity {
         });
         mDrawerList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (DrawerListValue[position].equals("學期課表") || DrawerListValue[position].equals("離線課表"))
+            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
+                if (!DrawerListValue.contains(List[position]))
+                    return;
+                if (SimCourseChange && LayoutId == R.layout.simcourse)
                 {
-                    initCourse(false, false, _isLogin);
+                    AlertDialogPro.Builder builder = CustomDialog("模擬選課", "尚未儲存變更，是否儲存課表？", false);
+                    builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            SaveSimCourseData();
+                            if (List[position].equals("學期課表") || List[position].equals("離線課表"))
+                            {
+                                initCourse(false, false, _isLogin);
+                            }
+                            else if (List[position].equals("學期成績")) {
+                                initScore(false, false);
+                            }
+                            else if (List[position].equals("缺曠系統")) {
+                                initLeave(false, false);
+                            }
+                            else if (List[position].equals("校車系統")) {
+                                initBus(true);
+                            }
+                            else if (List[position].equals("校園資訊")) {
+                                initEvent(_isLogin, true);
+                            }
+                            else if (List[position].equals("模擬選課")) {
+                                initSimCourse(true, true);
+                            }
+                            else if (List[position].equals("個人資訊")) {
+                                initUser();
+                            }
+                        }
+                    }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            if (List[position].equals("學期課表") || List[position].equals("離線課表"))
+                            {
+                                initCourse(false, false, _isLogin);
+                            }
+                            else if (List[position].equals("學期成績")) {
+                                initScore(false, false);
+                            }
+                            else if (List[position].equals("缺曠系統")) {
+                                initLeave(false, false);
+                            }
+                            else if (List[position].equals("校車系統")) {
+                                initBus(true);
+                            }
+                            else if (List[position].equals("校園資訊")) {
+                                initEvent(_isLogin, true);
+                            }
+                            else if (List[position].equals("模擬選課")) {
+                                initSimCourse(true, true);
+                            }
+                            else if (List[position].equals("個人資訊")) {
+                                initUser();
+                            }
+                        }
+                    }).show();
                 }
-                else if (DrawerListValue[position].equals("學期成績"))
+                else
                 {
-                    initScore(false, false);
-                }
-                else if (DrawerListValue[position].equals("缺曠系統"))
-                {
-                    initLeave1(false, false);
-                }
-                else if (DrawerListValue[position].equals("校車系統"))
-                {
-                    initBus1(true);
-                }
-                else if (DrawerListValue[position].equals("校園資訊"))
-                {
-                    initEvent1(_isLogin, true);
-                }
-                else if (DrawerListValue[position].equals("模擬選課"))
-                {
-                    initSimCourse(true, true);
+                    if (List[position].equals("學期課表") || List[position].equals("離線課表"))
+                    {
+                        initCourse(false, false, _isLogin);
+                    }
+                    else if (List[position].equals("學期成績")) {
+                        initScore(false, false);
+                    }
+                    else if (List[position].equals("缺曠系統")) {
+                        initLeave(false, false);
+                    }
+                    else if (List[position].equals("校車系統")) {
+                        initBus(true);
+                    }
+                    else if (List[position].equals("校園資訊")) {
+                        initEvent(_isLogin, true);
+                    }
+                    else if (List[position].equals("模擬選課")) {
+                        initSimCourse(true, true);
+                    }
+                    else if (List[position].equals("個人資訊")) {
+                        initUser();
+                    }
                 }
             }
         });
@@ -823,7 +1318,7 @@ public class MainActivity extends ActionBarActivity {
                 drawerArrowDrawable.setParameter(offset);
             }
         });
-        if (!(DrawerListValue.length == 0 && AboutListValue.length == 0))
+        if (!(DrawerListValue.size() == 0 && AboutListValue.length == 0))
         {
             imageView.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -838,11 +1333,16 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    public void initCourse(boolean select, boolean cancel, final boolean _isLogin){
+    public void initCourse(final boolean select, boolean cancel, final boolean _isLogin){
         if (_isLogin)
-            setContentView(R.layout.course);
+        {
+            if (!select)
+                setContentViewEx(R.layout.course);
+            mViewFlipper = (ViewFlipper) this.findViewById(R.id.view_flipper);
+        }
         else
-            setContentView(R.layout.offlinecourse);
+            setContentViewEx(R.layout.offlinecourse);
+
         TextView textView = (TextView) findViewById(R.id.textView);
         textView.setVisibility(View.GONE);
 
@@ -855,22 +1355,31 @@ public class MainActivity extends ActionBarActivity {
                 @Override
                 public void onClick(View v) {
                     _fncid = "AG222";
+                    mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.push_up_in));
+                    mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                    mViewFlipper.setDisplayedChild(1);
                     initSelect();
                 }
             });
         }
 
         if (_isLogin)
-            initDrawer(new String[]{ "學期成績", "缺曠系統", "校車系統", "模擬選課", "校園資訊" }, new String[]{ "關於我們" }, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("學期成績", "缺曠系統", "校車系統", "模擬選課", "校園資訊", "個人資訊")), new String[]{ "關於我們" }, _isLogin, true);
         else
-            initDrawer(new String[]{ "校園資訊" }, new String[]{ "關於我們" }, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("校園資訊")), new String[]{ "關於我們" }, _isLogin, true);
 
         _fncid = "AG222";
         ReadCourseRunnable = new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (!CheckLoginState())
+                    if (select)
+                    {
+                        Thread.sleep(400);
+                        LoadingDialogHandler.sendEmptyMessage(-1);
+                    }
+
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -945,7 +1454,7 @@ public class MainActivity extends ActionBarActivity {
                     for (int i = 2; i <= Xsoup.compile("/html/body/table/tbody/tr").evaluate(document).list().size(); i++)
                     {
                         ArrayList<CourseList> CourseList2 = new ArrayList<>();
-                        String getData = Xsoup.compile("/html/body/table/tbody/tr[" + i + "]").evaluate(document).getElements().text().replace("  ","x");
+                        String getData = Xsoup.compile("/html/body/table/tbody/tr[" + i + "]").evaluate(document).getElements().text().replace("? ","x");
                         for (int j = 2; j <= 8 ; j++)
                         {
                            if (getData.split("x")[j].split(" ").length >=2)
@@ -1004,7 +1513,7 @@ public class MainActivity extends ActionBarActivity {
                                 public void onClick(DialogInterface dialog, int which) {
                                     SharedPreferences setting = getSharedPreferences("KUAS AP", 0);
                                     setting.edit().putString("OfflineCourse", "").apply();
-                                    addOfflineCourse();
+                                    new _AsyncTask().execute();
                                     Toast.makeText(getApplicationContext(), "已將離線課表清除", Toast.LENGTH_SHORT).show();
                                 }
                             }).
@@ -1022,7 +1531,6 @@ public class MainActivity extends ActionBarActivity {
             {
                 if (!cancel)
                 {
-                    LoadingDialogHandler.sendEmptyMessage(-1);
                     new Thread(ReadCourseRunnable).start();
                     initSelectSemester();
                 }
@@ -1035,30 +1543,41 @@ public class MainActivity extends ActionBarActivity {
         }
         else
         {
-            addOfflineCourse();
+            new _AsyncTask().execute();
         }
     }
 
-    public void initScore(boolean select, boolean cancel){
-        setContentView(R.layout.score);
+    public void initScore(final boolean select, boolean cancel){
+        if (!select)
+            setContentViewEx(R.layout.score);
+        mViewFlipper = (ViewFlipper) this.findViewById(R.id.view_flipper);
 
         RelativeLayout Select = (RelativeLayout) findViewById(R.id.select);
         Select.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 _fncid = "AG008";
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.push_up_in));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setDisplayedChild(1);
                 initSelect();
             }
         });
 
-        initDrawer(new String[]{ "學期課表", "缺曠系統", "校車系統", "模擬選課", "校園資訊" }, new String[]{ "關於我們" }, true, true);
+        initDrawer(new ArrayList<>(Arrays.asList("學期課表", "缺曠系統", "校車系統", "模擬選課", "校園資訊", "個人資訊")), new String[]{ "關於我們" }, true, true);
 
         _fncid = "AG008";
         ReadScoreRunnable = new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (!CheckLoginState())
+                    if (select)
+                    {
+                        Thread.sleep(400);
+                        LoadingDialogHandler.sendEmptyMessage(-1);
+                    }
+
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -1126,7 +1645,6 @@ public class MainActivity extends ActionBarActivity {
         {
             if (!cancel)
             {
-                LoadingDialogHandler.sendEmptyMessage(-1);
                 new Thread(ReadScoreRunnable).start();
                 initSelectSemester();
             }
@@ -1138,14 +1656,27 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    public void initLeave1(boolean select, boolean cancel){
-        setContentView(R.layout.leave1);
+    void initLeave(boolean select, boolean cancel)
+    {
+        setContentViewEx(R.layout.leave);
+        mViewFlipper = (ViewFlipper) this.findViewById(R.id.view_flipper);
+        initLeave1(select, cancel);
+    }
+
+    public void initLeave1(final boolean select, boolean cancel){
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_search_black_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(Color.BLACK);
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_create_grey600_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(getResources().getColor(R.color.page_grey));
 
         RelativeLayout Select = (RelativeLayout) findViewById(R.id.select);
         Select.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 _fncid = "AK002";
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.push_up_in));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setDisplayedChild(1);
                 initSelect();
             }
         });
@@ -1154,6 +1685,7 @@ public class MainActivity extends ActionBarActivity {
         Page2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                ((ViewFlipper) findViewById(R.id.view_flipper2)).setDisplayedChild(1);
                 initLeave2();
             }
         });
@@ -1161,14 +1693,20 @@ public class MainActivity extends ActionBarActivity {
         TextView textView = (TextView) findViewById(R.id.textView);
         textView.setVisibility(View.GONE);
 
-        initDrawer(new String[]{ "學期課表", "學期成績", "校車系統", "模擬選課", "校園資訊" }, new String[]{ "關於我們" }, true, true);
+        initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "校車系統", "模擬選課", "校園資訊", "個人資訊")), new String[]{ "關於我們" }, true, true);
 
         _fncid = "AK002";
         ReadLeaveRunnable = new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (!CheckLoginState())
+                    if (select)
+                    {
+                        Thread.sleep(400);
+                        LoadingDialogHandler.sendEmptyMessage(-1);
+                    }
+
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -1295,7 +1833,6 @@ public class MainActivity extends ActionBarActivity {
         {
             if (!cancel)
             {
-                LoadingDialogHandler.sendEmptyMessage(-1);
                 new Thread(ReadLeaveRunnable).start();
                 initSelectSemester();
             }
@@ -1308,17 +1845,21 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void initLeave2(){
-        setContentView(R.layout.leave2);
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_search_grey600_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(getResources().getColor(R.color.page_grey));
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_create_black_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(Color.BLACK);
 
         RelativeLayout Page1 = (RelativeLayout) findViewById(R.id.relativeLayout);
         Page1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                ((ViewFlipper) findViewById(R.id.view_flipper2)).setDisplayedChild(0);
                 initLeave1(true, true);
             }
         });
 
-        initDrawer(new String[]{ "學期課表", "學期成績", "校車系統", "模擬選課", "校園資訊" }, new String[]{ "關於我們" }, true, true);
+        initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "校車系統", "模擬選課", "校園資訊", "個人資訊")), new String[]{ "關於我們" }, true, true);
 
         _fncid = "";
 
@@ -1493,7 +2034,7 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void run() {
                 try {
-                    if (!CheckLoginState())
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -1618,10 +2159,22 @@ public class MainActivity extends ActionBarActivity {
         });
     }
 
-    public void initEvent1(final boolean _isLogin, final boolean ReLoad){
-        setContentView(R.layout.event1);
+    void initEvent(boolean _isLogin, boolean Reload)
+    {
+        setContentViewEx(R.layout.event);
+        mViewFlipper = (ViewFlipper) this.findViewById(R.id.view_flipper);
+        initEvent1(_isLogin, Reload);
+    }
 
+    public void initEvent1(final boolean _isLogin, final boolean ReLoad){
         final ListView NotificationListView = (ListView) findViewById(R.id.notification_listView);
+
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_announcement_black_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(Color.BLACK);
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_phone_grey600_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(getResources().getColor(R.color.page_grey));
+        findViewById(R.id.imageView3).setBackgroundResource(R.drawable.ic_event_note_grey600_48dp);
+        ((TextView) findViewById(R.id.textView3)).setTextColor(getResources().getColor(R.color.page_grey));
 
         RelativeLayout Page2 = (RelativeLayout) findViewById(R.id.RelativeLayout2);
         Page2.setOnClickListener(new View.OnClickListener() {
@@ -1629,6 +2182,7 @@ public class MainActivity extends ActionBarActivity {
             public void onClick(View v) {
                 NotificationListViewIndex = NotificationListView.getFirstVisiblePosition();
                 NotificationListViewTop = (NotificationListView.getChildAt(0) == null) ? 0 : (NotificationListView.getChildAt(0).getTop() - NotificationListView.getPaddingTop());
+                mViewFlipper.setDisplayedChild(1);
                 initEvent2(_isLogin);
             }
         });
@@ -1639,14 +2193,15 @@ public class MainActivity extends ActionBarActivity {
             public void onClick(View v) {
                 NotificationListViewIndex = NotificationListView.getFirstVisiblePosition();
                 NotificationListViewTop = (NotificationListView.getChildAt(0) == null) ? 0 : (NotificationListView.getChildAt(0).getTop() - NotificationListView.getPaddingTop());
+                mViewFlipper.setDisplayedChild(2);
                 initEvent3(_isLogin);
             }
         });
 
         if (_isLogin)
-            initDrawer(new String[]{ "學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課" }, new String[]{ "關於我們" }, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "個人資訊")), new String[]{ "關於我們" }, _isLogin, true);
         else
-            initDrawer(new String[]{ "離線課表" }, new String[]{ "關於我們" }, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("離線課表")), new String[]{ "關於我們" }, _isLogin, true);
 
         _fncid = "";
 
@@ -1675,7 +2230,10 @@ public class MainActivity extends ActionBarActivity {
                             e.printStackTrace();
                         }
                     }
-                    ReadNotificationHandler.sendEmptyMessage(1);
+                    if (data.equals("[]") || data.equals(""))
+                        ReadNotificationHandler.sendEmptyMessage(2);
+                    else
+                        ReadNotificationHandler.sendEmptyMessage(1);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -1732,9 +2290,18 @@ public class MainActivity extends ActionBarActivity {
         }
         else
         {
-            NowPage.setText("第" + NotificationPage + "頁");
-            addNotification();
-            NotificationListView.setSelectionFromTop(NotificationListViewIndex, NotificationListViewTop);
+            if (NotificationList.size() == 0)
+            {
+                NotificationPage = 1;
+                LoadingDialogHandler.sendEmptyMessage(-1);
+                new Thread(ReadNotificationRunnable).start();
+            }
+            else
+            {
+                NowPage.setText("第" + NotificationPage + "頁");
+                new addNotificationAsyncTask().execute();
+                NotificationListView.setSelectionFromTop(NotificationListViewIndex, NotificationListViewTop);
+            }
         }
 
         if (NotificationPage == 1)
@@ -1744,9 +2311,14 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void initEvent2(final boolean _isLogin){
-        setContentView(R.layout.event2);
-
         final ListView PhoneListView = (ListView) findViewById(R.id.phone_listView);
+
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_announcement_grey600_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(getResources().getColor(R.color.page_grey));
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_phone_black_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(Color.BLACK);
+        findViewById(R.id.imageView3).setBackgroundResource(R.drawable.ic_event_note_grey600_48dp);
+        ((TextView) findViewById(R.id.textView3)).setTextColor(getResources().getColor(R.color.page_grey));
 
         RelativeLayout Page1 = (RelativeLayout) findViewById(R.id.RelativeLayout);
         Page1.setOnClickListener(new View.OnClickListener() {
@@ -1754,6 +2326,7 @@ public class MainActivity extends ActionBarActivity {
             public void onClick(View v) {
                 PhoneListViewIndex = PhoneListView.getFirstVisiblePosition();
                 PhoneListViewTop = (PhoneListView.getChildAt(0) == null) ? 0 : (PhoneListView.getChildAt(0).getTop() - PhoneListView.getPaddingTop());
+                mViewFlipper.setDisplayedChild(0);
                 initEvent1(_isLogin, false);
             }
         });
@@ -1764,24 +2337,30 @@ public class MainActivity extends ActionBarActivity {
             public void onClick(View v) {
                 PhoneListViewIndex = PhoneListView.getFirstVisiblePosition();
                 PhoneListViewTop = (PhoneListView.getChildAt(0) == null) ? 0 : (PhoneListView.getChildAt(0).getTop() - PhoneListView.getPaddingTop());
+                mViewFlipper.setDisplayedChild(2);
                 initEvent3(_isLogin);
             }
         });
 
         if (_isLogin)
-            initDrawer(new String[]{ "學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課" }, new String[]{ "關於我們" }, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "個人資訊")), new String[]{ "關於我們" }, _isLogin, true);
         else
-            initDrawer(new String[]{ "離線課表" }, new String[]{ "關於我們" }, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("離線課表")), new String[]{ "關於我們" }, _isLogin, true);
 
         _fncid = "";
-        addPhone();
+        new addPhoneAsyncTask().execute();
         PhoneListView.setSelectionFromTop(PhoneListViewIndex, PhoneListViewTop);
     }
 
     public void initEvent3(final boolean _isLogin){
-        setContentView(R.layout.event3);
-
         final ScrollView scrollView = (ScrollView) findViewById(R.id.scrollView);
+
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_announcement_grey600_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(getResources().getColor(R.color.page_grey));
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_phone_grey600_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(getResources().getColor(R.color.page_grey));
+        findViewById(R.id.imageView3).setBackgroundResource(R.drawable.ic_event_note_black_48dp);
+        ((TextView) findViewById(R.id.textView3)).setTextColor(Color.BLACK);
 
         RelativeLayout Page1 = (RelativeLayout) findViewById(R.id.RelativeLayout);
         Page1.setOnClickListener(new View.OnClickListener() {
@@ -1789,6 +2368,7 @@ public class MainActivity extends ActionBarActivity {
             public void onClick(View v) {
                 Event3TableLayoutX = scrollView.getScrollX();
                 Event3TableLayoutY = scrollView.getScrollY();
+                mViewFlipper.setDisplayedChild(0);
                 initEvent1(_isLogin, false);
             }
         });
@@ -1799,17 +2379,18 @@ public class MainActivity extends ActionBarActivity {
             public void onClick(View v) {
                 Event3TableLayoutX = scrollView.getScrollX();
                 Event3TableLayoutY = scrollView.getScrollY();
+                mViewFlipper.setDisplayedChild(1);
                 initEvent2(_isLogin);
             }
         });
 
         if (_isLogin)
-            initDrawer(new String[]{ "學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課" }, new String[]{ "關於我們" }, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "個人資訊")), new String[]{ "關於我們" }, _isLogin, true);
         else
-            initDrawer(new String[]{ "離線課表" }, new String[]{ "關於我們" }, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("離線課表")), new String[]{ "關於我們" }, _isLogin, true);
 
         _fncid = "";
-        addSchedule();
+        new addScheduleAsyncTask().execute();
         scrollView.post(new Runnable() {
             @Override
             public void run() {
@@ -1818,14 +2399,26 @@ public class MainActivity extends ActionBarActivity {
         });
     }
 
+    void initBus(boolean ShowCal)
+    {
+        setContentViewEx(R.layout.bus);
+        mViewFlipper = (ViewFlipper) this.findViewById(R.id.view_flipper);
+        initBus1(ShowCal);
+    }
+
     private void initBus1(boolean ShowCal)
     {
-        setContentView(R.layout.bus1);
+        ((TextView) findViewById(R.id.indicator_style)).setText("校車預約");
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_directions_bus_black_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(Color.BLACK);
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_search_grey600_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(getResources().getColor(R.color.page_grey));
 
         RelativeLayout Page2 = (RelativeLayout) findViewById(R.id.RelativeLayout2);
         Page2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mViewFlipper.setDisplayedChild(1);
                 initBus2();
             }
         });
@@ -1856,7 +2449,7 @@ public class MainActivity extends ActionBarActivity {
         TextView noBusTextView = (TextView) findViewById(R.id.noBusTextView);
         noBusTextView.setVisibility(View.GONE);
 
-        initDrawer(new String[]{ "學期課表", "學期成績", "缺曠系統", "模擬選課", "校園資訊" }, new String[]{ "關於我們" }, true, true);
+        initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "模擬選課", "校園資訊", "個人資訊")), new String[]{ "關於我們" }, true, true);
 
         _fncid = "";
 
@@ -1900,7 +2493,7 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void run() {
                 try {
-                    if (!CheckLoginState())
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -1934,7 +2527,7 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void run() {
                 try {
-                    if (!CheckLoginState())
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -1993,22 +2586,28 @@ public class MainActivity extends ActionBarActivity {
 
     private void initBus2()
     {
-        setContentView(R.layout.bus2);
-
         TextView noReserveTextView = (TextView) findViewById(R.id.noReserveTextView);
         ImageView noReserveImageView = (ImageView) findViewById(R.id.noReserveImageView);
         noReserveTextView.setVisibility(View.GONE);
         noReserveImageView.setVisibility(View.GONE);
 
+        ((TextView) findViewById(R.id.indicator_style)).setText("預約查詢");
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_directions_bus_grey600_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(getResources().getColor(R.color.page_grey));
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_search_black_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(Color.BLACK);
+
+
         RelativeLayout Page1 = (RelativeLayout) findViewById(R.id.relativeLayout);
         Page1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mViewFlipper.setDisplayedChild(0);
                 initBus1(false);
             }
         });
 
-        initDrawer(new String[]{ "學期課表", "學期成績", "缺曠系統", "模擬選課", "校園資訊" }, new String[]{ "關於我們" }, true, true);
+        initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "模擬選課", "校園資訊", "個人資訊")), new String[]{ "關於我們" }, true, true);
 
         _fncid = "";
 
@@ -2016,7 +2615,7 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void run() {
                 try {
-                    if (!CheckLoginState())
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -2050,7 +2649,7 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void run() {
             try {
-                if (!CheckLoginState())
+                if (CheckLoginState() != 1)
                 {
                     if (!ReLogin())
                     {
@@ -2090,19 +2689,27 @@ public class MainActivity extends ActionBarActivity {
 
     private void initAbout(final boolean _isLogin)
     {
-        setContentView(R.layout.about);
+        setContentViewEx(R.layout.about);
 
         if (_isLogin)
-            initDrawer(new String[]{ "學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "校園資訊" }, new String[]{}, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "校車系統", "模擬選課", "校園資訊", "個人資訊")), new String[]{}, _isLogin, true);
         else
-            initDrawer(new String[]{ "離線課表", "校園資訊" }, new String[]{}, _isLogin, true);
+            initDrawer(new ArrayList<>(Arrays.asList("離線課表", "校園資訊")), new String[]{}, _isLogin, true);
 
         ImageView facebook = (ImageView) findViewById(R.id.facebook);
         facebook.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/pages/%E9%AB%98%E6%87%89%E6%A0%A1%E5%8B%99%E9%80%9A/954175941266264?fref=ts"));
-                startActivity(browserIntent);
+                if (isPackageAvailable("com.facebook.katana"))
+                {
+                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("fb://page/954175941266264"));
+                    startActivity(browserIntent);
+                }
+                else
+                {
+                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.facebook.com/profile.php?id=954175941266264"));
+                    startActivity(browserIntent);
+                }
             }
         });
         ImageView github = (ImageView) findViewById(R.id.github);
@@ -2122,7 +2729,7 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
-        _fncid = "about";
+        _fncid = "";
 
         initAboutPathView();
     }
@@ -2180,16 +2787,18 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    private void initSimCourse(boolean Reload, final boolean _isLogin)
-    {
-        setContentView(R.layout.simcourse);
+    private void initSimCourse(boolean Reload, final boolean _isLogin) {
+        setContentViewEx(R.layout.simcourse);
 
-        _fncid = "SimCourse";
+        _fncid = "";
+
+        SimCourseSearchResult.clear();
+        SimCourseSearchData = "";
 
         findViewById(R.id.RelativeLayout).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                initSimCourseSearch1(true);
+                initSimCourseSearch1(true, true);
             }
         });
 
@@ -2227,266 +2836,7 @@ public class MainActivity extends ActionBarActivity {
             }
         });
 
-        final String[] DrawerListValue = new String[]{ "學期課表", "學期成績", "缺曠系統", "校車系統", "校園資訊" };
-        final String[] AboutListValue = new String[]{ "關於我們" };
-
-        RelativeLayout Logout = (RelativeLayout) findViewById(R.id.Logout);
-        Logout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (SimCourseChange)
-                {
-                    AlertDialogPro.Builder builder = CustomDialog("模擬選課", "尚未儲存變更，是否儲存課表？", false);
-                    builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            SaveSimCourseData();
-                            if (_isLogin)
-                                initLogout();
-                            else
-                                initLogin();
-                        }
-                    }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            if (_isLogin)
-                                initLogout();
-                            else
-                                initLogin();
-                        }
-                    }).show();
-                }
-                else
-                {
-                    if (_isLogin)
-                        initLogout();
-                    else
-                        initLogin();
-                }
-            }
-        });
-        mDrawerList = (ListView)findViewById(R.id.drawerlistView);
-        mAboutList = (ListView)findViewById(R.id.aboutlistView);
-        ArrayAdapter<String> adapter=new ArrayAdapter<String>(
-                this,R.layout.menulistview_item, DrawerListValue){
-            private LayoutInflater mInflater = LayoutInflater.from(MainActivity.this);
-
-            class ViewHolder {
-                public TextView textView;
-                public ImageView imageView;
-            }
-
-            @Override
-            public View getView(int position, View convertView,
-                                ViewGroup parent) {
-                ViewHolder holder;
-                if (convertView == null) {
-                    holder = new ViewHolder();
-                    convertView = mInflater.inflate(R.layout.menulistview_item, null);
-                    holder.textView = (TextView) convertView.findViewById(R.id.textView);
-                    holder.imageView = (ImageView) convertView.findViewById(R.id.imageView);
-                    convertView.setTag(holder);
-                } else {
-                    holder = (ViewHolder)convertView.getTag();
-                }
-                holder.textView.setText(DrawerListValue[position]);
-                return convertView;
-            }
-        };
-        ArrayAdapter<String> aboutadapter=new ArrayAdapter<String>(
-                this,R.layout.menulistview_item, AboutListValue){
-            private LayoutInflater mInflater = LayoutInflater.from(MainActivity.this);
-
-            class ViewHolder {
-                public TextView textView;
-                public ImageView imageView;
-            }
-
-            @Override
-            public View getView(int position, View convertView,
-                                ViewGroup parent) {
-                ViewHolder holder;
-                if (convertView == null) {
-                    holder = new ViewHolder();
-                    convertView = mInflater.inflate(R.layout.menulistview_item, null);
-                    holder.textView = (TextView) convertView.findViewById(R.id.textView);
-                    holder.imageView = (ImageView) convertView.findViewById(R.id.imageView);
-                    convertView.setTag(holder);
-                } else {
-                    holder = (ViewHolder)convertView.getTag();
-                }
-                holder.textView.setText(AboutListValue[position]);
-                holder.imageView.setBackgroundResource(R.drawable.ic_thumb_up_black_48dp);
-                return convertView;
-            }
-        };
-        if (AboutListValue.length != 0)
-            mAboutList.setAdapter(aboutadapter);
-        if (DrawerListValue.length != 0)
-            mDrawerList.setAdapter(adapter);
-        mAboutList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-                if (SimCourseChange)
-                {
-                    AlertDialogPro.Builder builder = CustomDialog("模擬選課", "尚未儲存變更，是否儲存課表？", false);
-                    builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            SaveSimCourseData();
-                            if (AboutListValue[position].equals("關於我們"))
-                            {
-                                initAbout(_isLogin);
-                            }
-                        }
-                    }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            if (AboutListValue[position].equals("關於我們"))
-                            {
-                                initAbout(_isLogin);
-                            }
-                        }
-                    }).show();
-                }
-                else
-                {
-                    if (AboutListValue[position].equals("關於我們"))
-                    {
-                        initAbout(_isLogin);
-                    }
-                }
-            }
-        });
-        mDrawerList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-                if (SimCourseChange)
-                {
-                    AlertDialogPro.Builder builder = CustomDialog("模擬選課", "尚未儲存變更，是否儲存課表？", false);
-                    builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            SaveSimCourseData();
-                            if (DrawerListValue[position].equals("學期課表") || DrawerListValue[position].equals("離線課表"))
-                            {
-                                initCourse(false, false, _isLogin);
-                            }
-                            else if (DrawerListValue[position].equals("學期成績"))
-                            {
-                                initScore(false, false);
-                            }
-                            else if (DrawerListValue[position].equals("缺曠系統"))
-                            {
-                                initLeave1(false, false);
-                            }
-                            else if (DrawerListValue[position].equals("校車系統"))
-                            {
-                                initBus1(true);
-                            }
-                            else if (DrawerListValue[position].equals("校園資訊"))
-                            {
-                                initEvent1(_isLogin, true);
-                            }
-                        }
-                    }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            if (DrawerListValue[position].equals("學期課表") || DrawerListValue[position].equals("離線課表"))
-                            {
-                                initCourse(false, false, _isLogin);
-                            }
-                            else if (DrawerListValue[position].equals("學期成績"))
-                            {
-                                initScore(false, false);
-                            }
-                            else if (DrawerListValue[position].equals("缺曠系統"))
-                            {
-                                initLeave1(false, false);
-                            }
-                            else if (DrawerListValue[position].equals("校車系統"))
-                            {
-                                initBus1(true);
-                            }
-                            else if (DrawerListValue[position].equals("校園資訊"))
-                            {
-                                initEvent1(_isLogin, true);
-                            }
-                        }
-                    }).show();
-                }
-                else
-                {
-                    if (DrawerListValue[position].equals("學期課表") || DrawerListValue[position].equals("離線課表"))
-                    {
-                        initCourse(false, false, _isLogin);
-                    }
-                    else if (DrawerListValue[position].equals("學期成績"))
-                    {
-                        initScore(false, false);
-                    }
-                    else if (DrawerListValue[position].equals("缺曠系統"))
-                    {
-                        initLeave1(false, false);
-                    }
-                    else if (DrawerListValue[position].equals("校車系統"))
-                    {
-                        initBus1(true);
-                    }
-                    else if (DrawerListValue[position].equals("校園資訊"))
-                    {
-                        initEvent1(_isLogin, true);
-                    }
-                }
-            }
-        });
-        final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        final ImageView imageView = (ImageView) findViewById(R.id.drawer_indicator);
-        final Resources resources = getResources();
-        drawerArrowDrawable = new DrawerArrowDrawable(resources, true);
-        drawerArrowDrawable.setStrokeColor(Color.WHITE);
-        imageView.setImageDrawable(drawerArrowDrawable);
-        try {
-            Field mDragger = drawer.getClass().getDeclaredField("mLeftDragger");
-            mDragger.setAccessible(true);
-            ViewDragHelper draggerObj = (ViewDragHelper) mDragger.get(drawer);
-
-            Field mEdgeSize = draggerObj.getClass().getDeclaredField("mEdgeSize");
-            mEdgeSize.setAccessible(true);
-            int edge = mEdgeSize.getInt(draggerObj);
-
-            mEdgeSize.setInt(draggerObj, 180);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        drawer.setDrawerListener(new DrawerLayout.SimpleDrawerListener() {
-            @Override
-            public void onDrawerSlide(View drawerView, float slideOffset) {
-                offset = slideOffset;
-                // Sometimes slideOffset ends up so close to but not quite 1 or 0.
-                if (slideOffset >= .995) {
-                    flipped = true;
-                    drawerArrowDrawable.setFlip(flipped);
-                } else if (slideOffset <= .005) {
-                    flipped = false;
-                    drawerArrowDrawable.setFlip(flipped);
-                }
-                drawerArrowDrawable.setParameter(offset);
-            }
-        });
-        if (!(DrawerListValue.length == 0 && AboutListValue.length == 0))
-        {
-            imageView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (drawer.isDrawerVisible(START)) {
-                        drawer.closeDrawer(START);
-                    } else {
-                        drawer.openDrawer(START);
-                    }
-                }
-            });
-        }
+        initDrawer(new ArrayList<>(Arrays.asList("學期課表", "學期成績", "缺曠系統", "校車系統", "校園資訊", "個人資訊")), new String[]{"關於我們"}, true, true);
 
         SimCourseReadCourseRunnable = new Runnable() {
             @Override
@@ -2494,7 +2844,7 @@ public class MainActivity extends ActionBarActivity {
                 try {
                     LoadingDialogHandler.sendEmptyMessage(-1);
 
-                    if (!CheckLoginState())
+                    if (CheckLoginState() != 1)
                     {
                         if (!ReLogin())
                         {
@@ -2566,23 +2916,24 @@ public class MainActivity extends ActionBarActivity {
 
         if (Reload)
         {
-            SimCourseChange = false;
             SharedPreferences setting = getSharedPreferences("KUAS AP", 0);
             String simCourseData = setting.getString("SimCourse", "");
             if (simCourseData.equals(""))
             {
                 SimCourseReadCourseType = 1;
+                SimCourseChange = true;
                 new Thread(SimCourseReadCourseRunnable).start();
             }
             else
             {
+                SimCourseChange = false;
                 RestoreSimCourseData(simCourseData);
-                addSimCourse();
+                new addSimCourseAsyncTask().execute();
             }
         }
         else
         {
-            addSimCourse();
+            new addSimCourseAsyncTask().execute();
         }
     }
 
@@ -2633,6 +2984,8 @@ public class MainActivity extends ActionBarActivity {
         SharedPreferences setting = getSharedPreferences("KUAS AP", 0);
         setting.edit().putString("SimCourse", jsonArray.toString()).apply();
 
+        Toast.makeText(getApplicationContext(), "已儲存課表！", Toast.LENGTH_SHORT).show();
+
         // Debug
         /*
         for(int i=0; i<jsonArray.toString().length(); i+=1024)
@@ -2682,9 +3035,21 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    private void initSimCourseSearch1(boolean Reload)
+    private void initSimCourseSearch1(boolean ReloadContext, boolean Reload)
     {
-        setContentView(R.layout.simcourse_search1);
+        if (ReloadContext)
+            setContentViewEx(R.layout.simcourse_search);
+        mViewFlipper = (ViewFlipper) this.findViewById(R.id.view_flipper);
+        mViewFlipper.setDisplayedChild(0);
+        SimCourseSelectDepartment = 0;
+
+        ViewFlipper mViewFlipper2 = (ViewFlipper) this.findViewById(R.id.view_flipper2);
+        mViewFlipper2.setDisplayedChild(0);
+
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_add_circle_black_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(Color.BLACK);
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_cancel_grey600_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(getResources().getColor(R.color.page_grey));
 
         _fncid = "";
 
@@ -2698,7 +3063,8 @@ public class MainActivity extends ActionBarActivity {
         }
         else
         {
-            LoadingDialogHandler.sendEmptyMessage(-1);
+            if (SimCourseSearchResult.size() > 0)
+                LoadingDialogHandler.sendEmptyMessage(-1);
             new Thread(ReLoadSimCourseSearchRunnable).start();
         }
 
@@ -2767,10 +3133,14 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onClick(View v) {
                 SimCourseKey = ((EditText) findViewById(R.id.SearchEditText)).getText().toString();
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.push_up_in));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setDisplayedChild(1);
                 initSimCourseSelectDepartment1();
             }
         });
 
+        findViewById(R.id.relativeLayout).setOnClickListener(null);
         findViewById(R.id.RelativeLayout2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -2881,7 +3251,7 @@ public class MainActivity extends ActionBarActivity {
 
                 SimCourseSearchResult = new ArrayList<>();
                 try {
-                    Document res = Jsoup.connect("http://course.kuas.cc/SearchResult").userAgent(USER_AGENT).data(values).method(Connection.Method.POST).post();
+                    Document res = Jsoup.connect("http://course.kuas.cc/SearchResult").userAgent(USER_AGENT).data(values).method(org.jsoup.Connection.Method.POST).post();
                     SimCourseSearchData = res.body().text();
                     JSONObject jsonObj = new JSONObject(SimCourseSearchData);
                     if (jsonObj.getBoolean("success"))
@@ -2971,7 +3341,16 @@ public class MainActivity extends ActionBarActivity {
 
     private void initSimCourseSearch2()
     {
-        setContentView(R.layout.simcourse_search2);
+        setContentViewEx(R.layout.simcourse_search);
+        mViewFlipper = (ViewFlipper) this.findViewById(R.id.view_flipper);
+        mViewFlipper.setDisplayedChild(0);
+        ViewFlipper mViewFlipper2 = (ViewFlipper) this.findViewById(R.id.view_flipper2);
+        mViewFlipper2.setDisplayedChild(1);
+
+        findViewById(R.id.imageView1).setBackgroundResource(R.drawable.ic_add_circle_grey600_48dp);
+        ((TextView) findViewById(R.id.textView1)).setTextColor(getResources().getColor(R.color.page_grey));
+        findViewById(R.id.imageView2).setBackgroundResource(R.drawable.ic_cancel_black_48dp);
+        ((TextView) findViewById(R.id.textView2)).setTextColor(Color.BLACK);
 
         _fncid = "";
 
@@ -2985,9 +3364,11 @@ public class MainActivity extends ActionBarActivity {
         findViewById(R.id.relativeLayout).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                initSimCourseSearch1(false);
+                initSimCourseSearch1(true, false);
             }
         });
+
+        findViewById(R.id.RelativeLayout2).setOnClickListener(null);
 
         final TableLayout table = (TableLayout) findViewById(R.id.CourseList);
         table.setStretchAllColumns(true);
@@ -3065,14 +3446,17 @@ public class MainActivity extends ActionBarActivity {
 
     private void initSimCourseSelectDepartment1()
     {
-        setContentView(R.layout.simcourse_select);
+        SimCourseSelectDepartment = 1;
 
         findViewById(R.id.up).setVisibility(View.GONE);
 
-        findViewById(R.id.cancel).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.cancel2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                initSimCourseSearch1(false);
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_down_out));
+                mViewFlipper.setDisplayedChild(1);
+                initSimCourseSearch1(false, false);
             }
         });
 
@@ -3103,10 +3487,15 @@ public class MainActivity extends ActionBarActivity {
 
     private void initSimCourseSelectDepartment2(int Unit)
     {
-        findViewById(R.id.cancel).setOnClickListener(new View.OnClickListener() {
+        SimCourseSelectDepartment = 2;
+
+        findViewById(R.id.cancel2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                initSimCourseSearch1(false);
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_down_out));
+                mViewFlipper.setDisplayedChild(1);
+                initSimCourseSearch1(false, false);
             }
         });
 
@@ -3343,7 +3732,10 @@ public class MainActivity extends ActionBarActivity {
 
         if (values[0].equals(""))
         {
-            initSimCourseSearch1(false);
+            mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+            mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_down_out));
+            mViewFlipper.setDisplayedChild(1);
+            initSimCourseSearch1(false, false);
             return;
         }
 
@@ -3368,7 +3760,10 @@ public class MainActivity extends ActionBarActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 SimCourseUnit = unitValues[position];
                 SimCourseUnitName = values[position];
-                initSimCourseSearch1(false);
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.hold));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_down_out));
+                mViewFlipper.setDisplayedChild(1);
+                initSimCourseSearch1(false, false);
             }
         });
     }
@@ -3425,6 +3820,22 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+    private Handler CheckFixedHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what)
+            {
+                case 1:
+                    try {
+                        ((TextView) findViewById(R.id.Fixed)).setText((String) msg.obj);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    break;
+            }
+        };
+    };
+
     private Handler SimCourseReadCourseHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -3433,13 +3844,13 @@ public class MainActivity extends ActionBarActivity {
                 case -1:
                     break;
                 case 1:
-                    addSimCourse();
-                    LoadingDialog.dismiss();
+                    new _AsyncTask().execute();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     break;
                 case 2:
-                    addSimCourse();
+                    new _AsyncTask().execute();
                     Toast.makeText(getApplicationContext(), "已將課表重置", Toast.LENGTH_SHORT).show();
-                    LoadingDialog.dismiss();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     break;
             }
         };
@@ -3479,16 +3890,27 @@ public class MainActivity extends ActionBarActivity {
             switch (msg.what)
             {
                 case -1:
-                    LoadingDialog.setMessage("Loading...");
-                    ProgressDialogPro progressDialog = (ProgressDialogPro) LoadingDialog;
-                    progressDialog.setProgressStyle(ProgressDialogPro.STYLE_SPINNER);
-                    progressDialog.setIndeterminate(true);
-                    LoadingDialog.setCancelable(false);
-                    LoadingDialog.setCanceledOnTouchOutside(false);
-                    LoadingDialog.show();
+                    if (!LoadingDialogIsShow)
+                    {
+                        LoadingDialogIsShow = true;
+                        Intent intent = new Intent();
+                        intent.setClass(MainActivity.this, LoadingDialog.class);
+
+                        Bundle bundle = new Bundle();
+                        bundle.putString("Title", LoadingDialogTitle);
+                        intent.putExtras(bundle);
+                        startActivity(intent);
+                    }
                     break;
                 case 1:
-                    LoadingDialog.dismiss();
+                    //com.kuas.ap.LoadingDialog.activity.finish();
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            com.kuas.ap.LoadingDialog.activity.finish();
+                            LoadingDialogIsShow = false;
+                        }
+                    }, 500);
                     break;
             }
         };
@@ -3500,8 +3922,8 @@ public class MainActivity extends ActionBarActivity {
             switch (msg.what)
             {
                 case 1:
-                    addScore();
-                    LoadingDialog.dismiss();
+                    new _AsyncTask().execute();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     break;
             }
         };
@@ -3513,8 +3935,8 @@ public class MainActivity extends ActionBarActivity {
             switch (msg.what)
             {
                 case 1:
-                    addCourse();
-                    LoadingDialog.dismiss();
+                    new _AsyncTask().execute();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     break;
             }
         };
@@ -3526,8 +3948,8 @@ public class MainActivity extends ActionBarActivity {
             switch (msg.what)
             {
                 case 1:
-                    addLeave();
-                    LoadingDialog.dismiss();
+                    new _AsyncTask().execute();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     break;
             }
         };
@@ -3541,7 +3963,7 @@ public class MainActivity extends ActionBarActivity {
                 case 1:
                     AlertDialogPro.Builder builder = CustomDialog("假單送出結果",(String) msg.obj, false);
                     builder.setPositiveButton("OK", null).show();
-                    LoadingDialog.dismiss();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     break;
             }
         };
@@ -3572,20 +3994,20 @@ public class MainActivity extends ActionBarActivity {
             {
                 case 1:
                     addBus();
-                    LoadingDialog.dismiss();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     break;
                 case 2:
                     addReserveBus();
-                    LoadingDialog.dismiss();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     break;
                 case 3:
                     Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_SHORT).show();
-                    LoadingDialogHandler.sendEmptyMessage(-1);
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     new Thread(ReadBusRunnable).start();
                     break;
                 case 4:
                     Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_SHORT).show();
-                    LoadingDialogHandler.sendEmptyMessage(-1);
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     new Thread(BusReserveRunnable).start();
                     break;
             }
@@ -3598,8 +4020,16 @@ public class MainActivity extends ActionBarActivity {
             switch (msg.what)
             {
                 case 1:
-                    addNotification();
-                    LoadingDialog.dismiss();
+                    try {
+                        new addNotificationAsyncTask().execute();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    LoadingDialogHandler.sendEmptyMessage(1);
+                    break;
+                case 2:
+                    LoadingDialogHandler.sendEmptyMessage(1);
+                    Toast.makeText(getApplicationContext(), "網路不穩定問題，請稍候嘗試...", Toast.LENGTH_SHORT).show();
                     break;
             }
         };
@@ -3610,20 +4040,29 @@ public class MainActivity extends ActionBarActivity {
         public void handleMessage(Message msg) {
             switch (msg.what)
             {
-                case 1:
-                    LoadingDialog.dismiss();
-                    AlertDialogPro.Builder builder = CustomDialog("Error", "帳號或密碼輸入錯誤 !", false);
-                    builder.setPositiveButton("確定", null).show();
+                case LoginError:
+                    LoadingDialogHandler.sendEmptyMessage(1);
+                    Toast.makeText(getApplicationContext(), "帳號或密碼輸入錯誤 !", Toast.LENGTH_SHORT).show();
+                    UserNameEditText.setBackgroundResource(R.drawable.login_table_top_red);
+                    PasswordEditText.setBackgroundResource(R.drawable.login_table_bottom_red);
+                    YoYo.with(Techniques.Shake).duration(700).playOn(findViewById(R.id.tablelayout));
                     SignInButton.setEnabled(true);
                     UserNameEditText.setEnabled(true);
                     PasswordEditText.setEnabled(true);
                     break;
-                case 2:
-                    LoadingDialog.dismiss();
+                case LoginSuccess:
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     SignInButton.setEnabled(true);
                     UserNameEditText.setEnabled(true);
                     PasswordEditText.setEnabled(true);
                     initLogout();
+                    break;
+                case LoginError2:
+                    LoadingDialogHandler.sendEmptyMessage(1);
+                    Toast.makeText(getApplicationContext(), "網路不穩定問題，請稍候嘗試...", Toast.LENGTH_SHORT).show();
+                    SignInButton.setEnabled(true);
+                    UserNameEditText.setEnabled(true);
+                    PasswordEditText.setEnabled(true);
                     break;
             }
         };
@@ -3635,7 +4074,7 @@ public class MainActivity extends ActionBarActivity {
             switch (msg.what)
             {
                 case -1:
-                    LoadingDialog.dismiss();
+                    LoadingDialogHandler.sendEmptyMessage(1);
                     initReLogin();
                     break;
             }
@@ -3654,138 +4093,14 @@ public class MainActivity extends ActionBarActivity {
         };
     };
 
-    private Handler showNewsHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            try {
-                JSONArray jsonObj = new JSONArray((String) msg.obj);
-                if ((jsonObj.getInt(0) == 1 && jsonObj.getInt(1) > news_id) || NewsDebug)
-                {
-                    news_id = jsonObj.getInt(1);
-                    SharedPreferences setting = getSharedPreferences("KUAS AP", 0);
-                    setting.edit().putInt("news_id", news_id).apply();
-                    jsonObj = new JSONArray(get_url_contents(api_server + "news", null, cookieStore));
-                    WebView image = new WebView(MainActivity.this);
-                    image.setBackgroundColor(0);
-                    image.loadDataWithBaseURL("", jsonObj.getString(3),"text/html", "UTF-8", "");
-                    AlertDialogPro.Builder builder;
-                    final String Url = jsonObj.getString(4);
-                    if (!Url.equals("") && Url.startsWith("http"))
-                    {
-                        builder = CustomDialog(jsonObj.getString(2), "", true);
-                        builder.setView(image).
-                                setPositiveButton("立即前往", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(Url));
-                                        startActivity(browserIntent);
-                                    }
-                                }).
-                                setNegativeButton("朕知道了", null).setCancelable(false).show();
-                    }
-                    else
-                    {
-                        builder = CustomDialog(jsonObj.getString(2), "", true);
-                        builder.setView(image).
-                                setPositiveButton("朕知道了", null)
-                                .setCancelable(false).show();
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        };
-    };
-
     private Handler SimCourseSearchHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            TableLayout table = (TableLayout) findViewById(R.id.SearchResult);
-            table.setStretchAllColumns(true);
-            table.setShrinkAllColumns(true);
-            table.removeAllViews();
-            switch (msg.what)
-            {
+            switch (msg.what) {
                 case -1:
                     if (SimCourseSearchResult.size() > 0)
                     {
-                        findViewById(R.id.scrollView).setVisibility(View.VISIBLE);
-                        findViewById(R.id.noResult).setVisibility(View.GONE);
-                        for (int i = 0; i < SimCourseSearchResult.size(); i++) {
-                            TableRow row = (TableRow) LayoutInflater.from(MainActivity.this).inflate(R.layout.simcourse_search_item1, null);
-                            ((TextView) row.findViewById(R.id.title)).setText(SimCourseSearchResult.get(i).courseName);
-                            ((TextView) row.findViewById(R.id.time)).setText(SimCourseSearchResult.get(i).courseTime);
-                            ((TextView) row.findViewById(R.id.teacher)).setText(SimCourseSearchResult.get(i).courseTeacher);
-                            ((TextView) row.findViewById(R.id.room)).setText(SimCourseSearchResult.get(i).courseRoom);
-                            ((TextView) row.findViewById(R.id.credit)).setText(SimCourseSearchResult.get(i).courseCredit.toString());
-                            final String time = SimCourseSearchResult.get(i).courseTime;
-                            final int _i = i;
-                            row.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    AlertDialogPro.Builder builder = CustomDialog("新增課程", "確定要新增「" + SimCourseSearchResult.get(_i).courseName + "」？", false);
-                                    builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            LoadingDialogHandler.sendEmptyMessage(-1);
-                                            ArrayList<String> dateList = new ArrayList<>(Arrays.asList("一", "二", "三", "四", "五", "六", "日"));
-                                            ArrayList<String> timeList = new ArrayList<>(Arrays.asList("M", "1", "2", "3", "4", "A", "5", "6", "7", "8", "B", "11", "12", "13", "14"));
-                                            ArrayList<String> timeList2 = new ArrayList<>(Arrays.asList("M", "第1節", "第2節", "第3節", "第4節", "A", "第5節", "第6節", "第7節", "第8節", "B", "第11節", "第12節", "第13節", "第14節"));
-                                            for (int j = 1; j < time.split("\\(").length; j++) {
-                                                ArrayList<Integer> courseTime = new ArrayList<>();
-                                                if (time.split("\\(")[j].contains(",")) {
-                                                    if (time.split("\\(")[j].split("\\)")[1].contains("-")) {
-                                                        if (time.split("\\(")[j].split("\\)")[1].split(",")[0].contains("-")) {
-                                                            for (int x = timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[0].split("-")[0]); x <= timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[0].split("-")[1]); x++) {
-                                                                courseTime.add(x);
-                                                            }
-                                                        } else {
-                                                            courseTime.add(timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[0]));
-                                                        }
-                                                        if (time.split("\\(")[j].split("\\)")[1].split(",")[1].contains("-")) {
-                                                            for (int x = timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[1].split("-")[0]); x <= timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[1].split("-")[1]); x++) {
-                                                                courseTime.add(x);
-                                                            }
-                                                        } else {
-                                                            courseTime.add(timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[1]));
-                                                        }
-                                                    } else {
-                                                        for (int x = 0; x < time.split("\\(")[j].split("\\)")[1].split(",").length; x++) {
-                                                            courseTime.add(timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[x]));
-                                                        }
-                                                    }
-                                                } else {
-                                                    if (time.split("\\(")[j].split("\\)")[1].contains("-")) {
-                                                        for (int x = timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split("-")[0]); x <= timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split("-")[1]); x++) {
-                                                            courseTime.add(x);
-                                                        }
-                                                    } else {
-                                                        courseTime.add(timeList.indexOf(time.split("\\(")[j].split("\\)")[1]));
-                                                    }
-                                                }
-                                                for (int x = 0; x < courseTime.size(); x++)
-                                                {
-                                                    SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).ID = SimCourseSearchResult.get(_i).courseName;
-                                                    if (SimCourseSearchResult.get(_i).courseTeacher.equals("--------"))
-                                                        SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Teacher = "";
-                                                    else
-                                                        SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Teacher = SimCourseSearchResult.get(_i).courseTeacher;
-                                                    if (SimCourseSearchResult.get(_i).courseRoom.equals("--------"))
-                                                        SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Place = "";
-                                                    else
-                                                        SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Place = SimCourseSearchResult.get(_i).courseRoom;
-                                                    SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Time = parseTime(timeList2.get(courseTime.get(x)));
-                                                }
-                                            }
-                                            new Thread(ReLoadSimCourseSearchRunnable).start();
-                                            SimCourseChange = true;
-                                            Toast.makeText(getApplicationContext(), "已將「" + SimCourseSearchResult.get(_i).courseName + "」新增至模擬選課", Toast.LENGTH_SHORT).show();
-                                        }
-                                    }).setNegativeButton("取消", null).setCancelable(false).show();
-                                }
-                            });
-                            table.addView(row);
-                        }
+                        new addSimCourseSearchAsyncTask().execute();
                     }
                     else
                     {
@@ -3868,12 +4183,26 @@ public class MainActivity extends ActionBarActivity {
 
     public void showNews(){
         try {
+            NewsData = "";
             Message msg = new Message();
             msg.what = 1;
             msg.obj = get_url_contents(api_server + "news/status", null, cookieStore);
-            showNewsHandler.sendMessage(msg);
+            NewsData =get_url_contents(api_server + "news", null, cookieStore);;
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private class addPhoneAsyncTask extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object... arg0) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Object result) {
+            super.onPostExecute(result);
+            addPhone();
         }
     }
 
@@ -3896,18 +4225,38 @@ public class MainActivity extends ActionBarActivity {
 
         PhoneListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-                AlertDialogPro.Builder builder = CustomDialog("撥出電話", "確定要撥給「" + PhoneList.get(position).title + "」？", false);
-                builder.setPositiveButton("撥出", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                Intent myIntentDial = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:"+ PhoneList.get(position).number.replace("#", ",")));
-                                startActivity(myIntentDial);
-                            }
-                        }).
-                        setNegativeButton("返回", null).setCancelable(false).show();
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Toast.makeText(getApplicationContext(), "長按以撥出電話", Toast.LENGTH_SHORT).show();
             }
         });
+        PhoneListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                AlertDialogPro.Builder builder = CustomDialog("撥出電話", "確定要撥給「" + PhoneList.get(position).title + "」？", false);
+                builder.setPositiveButton("撥出", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent myIntentDial = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:"+ PhoneList.get(position).number.replace("#", ",")));
+                        startActivity(myIntentDial);
+                    }
+                }).
+                        setNegativeButton("返回", null).show();
+                return false;
+            }
+        });
+    }
+
+    private class addScheduleAsyncTask extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object... arg0) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Object result) {
+            super.onPostExecute(result);
+            addSchedule();
+        }
     }
 
     public void addSchedule(){
@@ -3934,17 +4283,30 @@ public class MainActivity extends ActionBarActivity {
                         public void onClick(View v) {
                             try {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+                                    Toast.makeText(getApplicationContext(), "長按以新增至行事曆", Toast.LENGTH_SHORT).show();
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                    rowx.setOnLongClickListener(new View.OnLongClickListener() {
+                        @Override
+                        public boolean onLongClick(View v) {
+                            try {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
                                     AlertDialogPro.Builder builder = CustomDialog("行事曆", "確定要將「" + msg.split("\\) ")[1] + "」新增至行事曆？", false);
                                     builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
                                             AddCalendarEvent(msg);
                                         }
-                                    }).setNegativeButton("返回", null).setCancelable(false).show();
+                                    }).setNegativeButton("返回", null).show();
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
+                            return false;
                         }
                     });
                     table.addView(rowx);
@@ -3952,6 +4314,19 @@ public class MainActivity extends ActionBarActivity {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private class addNotificationAsyncTask extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object... arg0) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Object result) {
+            super.onPostExecute(result);
+            addNotification();
         }
     }
 
@@ -4045,16 +4420,23 @@ public class MainActivity extends ActionBarActivity {
                                 setNegativeButton("返回", null).setCancelable(false).show();
                     }
                 });
-                ((TextView)row.findViewById(R.id.location)).setText("✔ 到" + NewBusList.get(i).endStation + "，發車：");
+                ((TextView)row.findViewById(R.id.location)).setText("? 到" + NewBusList.get(i).endStation + "，發車：");
             }
             ((TextView)row.findViewById(R.id.time)).setText(NewBusList.get(i).runDateTime.split(" ")[1]);
             ((TextView)row.findViewById(R.id.count)).setText("(" + NewBusList.get(i).reserveCount + "/" + NewBusList.get(i).limitCount + ")");
             table.addView(row);
         }
+
+        findViewById(R.id.scrollView).post(new Runnable() {
+            @Override
+            public void run() {
+                findViewById(R.id.scrollView).scrollTo(0, 0);
+            }
+        });
     }
 
     public void addReserveBus() {
-        TableLayout table = (TableLayout) findViewById(R.id.tablelayout);
+        TableLayout table = (TableLayout) findViewById(R.id.tablelayout2);
         table.setStretchAllColumns(true);
         table.removeAllViews();
         TextView noReserveTextView = (TextView) findViewById(R.id.noReserveTextView);
@@ -4317,6 +4699,118 @@ public class MainActivity extends ActionBarActivity {
         addCourse();
     }
 
+    private class addSimCourseAsyncTask extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object... arg0) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Object result) {
+            super.onPostExecute(result);
+            addSimCourse();
+        }
+    }
+
+    private class addSimCourseSearchAsyncTask extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object... arg0) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Object result) {
+            super.onPostExecute(result);
+            addSimCourseSearch();
+            LoadingDialogHandler.sendEmptyMessage(1);
+        }
+    }
+
+    void addSimCourseSearch()
+    {
+        TableLayout table = (TableLayout) findViewById(R.id.SearchResult);
+        table.setStretchAllColumns(true);
+        table.setShrinkAllColumns(true);
+        table.removeAllViews();
+        findViewById(R.id.scrollView).setVisibility(View.VISIBLE);
+        findViewById(R.id.noResult).setVisibility(View.GONE);
+        for (int i = 0; i < SimCourseSearchResult.size(); i++) {
+            TableRow row = (TableRow) LayoutInflater.from(MainActivity.this).inflate(R.layout.simcourse_search_item1, null);
+            ((TextView) row.findViewById(R.id.title)).setText(SimCourseSearchResult.get(i).courseName);
+            ((TextView) row.findViewById(R.id.time)).setText(SimCourseSearchResult.get(i).courseTime);
+            ((TextView) row.findViewById(R.id.teacher)).setText(SimCourseSearchResult.get(i).courseTeacher);
+            ((TextView) row.findViewById(R.id.room)).setText(SimCourseSearchResult.get(i).courseRoom);
+            ((TextView) row.findViewById(R.id.credit)).setText(SimCourseSearchResult.get(i).courseCredit.toString());
+            final String time = SimCourseSearchResult.get(i).courseTime;
+            final int _i = i;
+            row.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    AlertDialogPro.Builder builder = CustomDialog("新增課程", "確定要新增「" + SimCourseSearchResult.get(_i).courseName + "」？", false);
+                    builder.setPositiveButton("確定", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            LoadingDialogHandler.sendEmptyMessage(-1);
+                            ArrayList<String> dateList = new ArrayList<>(Arrays.asList("一", "二", "三", "四", "五", "六", "日"));
+                            ArrayList<String> timeList = new ArrayList<>(Arrays.asList("M", "1", "2", "3", "4", "A", "5", "6", "7", "8", "B", "11", "12", "13", "14"));
+                            ArrayList<String> timeList2 = new ArrayList<>(Arrays.asList("M", "第1節", "第2節", "第3節", "第4節", "A", "第5節", "第6節", "第7節", "第8節", "B", "第11節", "第12節", "第13節", "第14節"));
+                            for (int j = 1; j < time.split("\\(").length; j++) {
+                                ArrayList<Integer> courseTime = new ArrayList<>();
+                                if (time.split("\\(")[j].contains(",")) {
+                                    if (time.split("\\(")[j].split("\\)")[1].contains("-")) {
+                                        if (time.split("\\(")[j].split("\\)")[1].split(",")[0].contains("-")) {
+                                            for (int x = timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[0].split("-")[0]); x <= timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[0].split("-")[1]); x++) {
+                                                courseTime.add(x);
+                                            }
+                                        } else {
+                                            courseTime.add(timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[0]));
+                                        }
+                                        if (time.split("\\(")[j].split("\\)")[1].split(",")[1].contains("-")) {
+                                            for (int x = timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[1].split("-")[0]); x <= timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[1].split("-")[1]); x++) {
+                                                courseTime.add(x);
+                                            }
+                                        } else {
+                                            courseTime.add(timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[1]));
+                                        }
+                                    } else {
+                                        for (int x = 0; x < time.split("\\(")[j].split("\\)")[1].split(",").length; x++) {
+                                            courseTime.add(timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split(",")[x]));
+                                        }
+                                    }
+                                } else {
+                                    if (time.split("\\(")[j].split("\\)")[1].contains("-")) {
+                                        for (int x = timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split("-")[0]); x <= timeList.indexOf(time.split("\\(")[j].split("\\)")[1].split("-")[1]); x++) {
+                                            courseTime.add(x);
+                                        }
+                                    } else {
+                                        courseTime.add(timeList.indexOf(time.split("\\(")[j].split("\\)")[1]));
+                                    }
+                                }
+                                for (int x = 0; x < courseTime.size(); x++)
+                                {
+                                    SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).ID = SimCourseSearchResult.get(_i).courseName;
+                                    if (SimCourseSearchResult.get(_i).courseTeacher.equals("--------"))
+                                        SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Teacher = "";
+                                    else
+                                        SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Teacher = SimCourseSearchResult.get(_i).courseTeacher;
+                                    if (SimCourseSearchResult.get(_i).courseRoom.equals("--------"))
+                                        SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Place = "";
+                                    else
+                                        SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Place = SimCourseSearchResult.get(_i).courseRoom;
+                                    SimCourseList.get(courseTime.get(x)).get(dateList.indexOf(time.split("\\(")[j].split("\\)")[0])).Time = parseTime(timeList2.get(courseTime.get(x)));
+                                }
+                            }
+                            new Thread(ReLoadSimCourseSearchRunnable).start();
+                            SimCourseChange = true;
+                            Toast.makeText(getApplicationContext(), "已將「" + SimCourseSearchResult.get(_i).courseName + "」新增至模擬選課", Toast.LENGTH_SHORT).show();
+                        }
+                    }).setNegativeButton("取消", null).setCancelable(false).show();
+                }
+            });
+            table.addView(row);
+        }
+    }
+
     public void addSimCourse() {
         try {
             ScrollView scrollView = (ScrollView) findViewById(R.id.scrollView);
@@ -4565,147 +5059,6 @@ public class MainActivity extends ActionBarActivity {
         scrollView.addView(table);
     }
 
-    public void addCourseOld() {
-        TableLayout table = (TableLayout) findViewById(R.id.tablelayout);
-        table.setStretchAllColumns(true);
-        table.removeAllViews();
-
-        TextView textView = (TextView) findViewById(R.id.textView);
-        if (!isHolidayClass)
-            textView.setVisibility(View.GONE);
-        else
-            textView.setVisibility(View.VISIBLE);
-
-        if (CourseList.size() == 0)
-        {
-            TableRow tablerow = new TableRow(MainActivity.this);
-            final TextView testview = new TextView(MainActivity.this);
-            testview.setTextSize(14);
-            testview.setGravity(Gravity.CENTER);
-            testview.setText("目前無學生個人選課資料");
-            testview.setBackgroundResource(R.drawable.tablelayout_oneitem);
-            tablerow.addView(testview,new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.MATCH_PARENT));
-            table.addView(tablerow);
-            return;
-        }
-
-        TableRow tablerowx = new TableRow(MainActivity.this);
-        String[] titles = {};
-
-        int x, y;
-        if (getResources().getConfiguration().orientation == 2) //橫向
-        {
-            textView.setVisibility(View.GONE);
-            if (isHolidayClass)
-            {
-                titles = new String[]{"　", "一", "二", "三", "四", "五", "六", "日"};
-                if (isNightClass || isHolidayNightClass)
-                    y = CourseList.size();
-                else
-                    y = 10;
-                x = 8;
-            }
-            else
-            {
-                titles = new String[]{"　", "一", "二", "三", "四", "五"};
-                if (isNightClass)
-                    y = CourseList.size();
-                else
-                    y = 10;
-                x = 6;
-            }
-        }
-        else //垂直
-        {
-            titles = new String[]{"　", "一", "二", "三", "四", "五"};
-            x = 6;
-            if (isNightClass)
-                y = CourseList.size();
-            else
-                y = 10;
-        }
-
-        for (int i = 0; i < titles.length; i++)
-        {
-            TextView title = new TextView(MainActivity.this);
-            title.setText(titles[i]);
-            title.setTextColor(getResources().getColor(R.color.blue));
-            title.setTextSize(14);
-            title.setGravity(Gravity.CENTER);
-            if (i == 0)
-                title.setBackgroundResource(R.drawable.course_top_left);
-            else if (i == titles.length-1)
-                title.setBackgroundResource(R.drawable.course_top_right);
-            else
-                title.setBackgroundResource(R.drawable.course_top_center);
-            tablerowx.addView(title);
-        }
-        table.addView(tablerowx);
-
-        String[] titles2 = {"M", "第1節", "第2節", "第3節", "第4節", "A", "第5節", "第6節", "第7節", "第8節", "B", "第11節", "第12節", "第13節", "第14節"};
-        for (int i = 0; i < y; i++) {
-            TableRow tablerow = new TableRow(MainActivity.this);
-            for (int j = 0; j < x; j++) {
-                final TextView testview = new TextView(MainActivity.this);
-                testview.setTextSize(16);
-
-                if (j == 0)
-                {
-                    testview.setTextColor(getResources().getColor(R.color.blue));
-                    testview.setTextSize(14);
-                    testview.setText(titles2[i]);
-                }
-                else
-                {
-                    testview.setTextColor(getResources().getColor(R.color.grey));
-                    if (CourseList.get(i).get(j - 1).ID.length() > 0)
-                        testview.setText(CourseList.get(i).get(j - 1).ID.substring(0,2));
-                    else
-                        testview.setText("　　");
-                }
-
-                final int yy = i;
-                final int xx = j;
-                if (j != 0 && !CourseList.get(i).get(j - 1).ID.equals(""))
-                    testview.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            AlertDialogPro.Builder builder = CustomDialog("", "課程名稱：" + CourseList.get(yy).get(xx - 1).ID
-                                    + "\n授課老師：" +  CourseList.get(yy).get(xx - 1).Teacher
-                                    + "\n教室位置：" + CourseList.get(yy).get(xx - 1).Place
-                                    + "\n上課時間：" + CourseList.get(yy).get(xx - 1).Time, false);
-                            builder.setPositiveButton("確定", null).show();
-                        }
-                    });
-
-                testview.setGravity(Gravity.CENTER);
-                if (j == 0)
-                {
-                    if (i == y-1)
-                        testview.setBackgroundResource(R.drawable.course_bottom_left);
-                    else
-                        testview.setBackgroundResource(R.drawable.course_normal_left);
-                }
-                else if (j == x-1)
-                {
-                    if (i == y-1)
-                        testview.setBackgroundResource(R.drawable.course_bottom_right);
-                    else
-                        testview.setBackgroundResource(R.drawable.course_normal_right);
-                }
-                else
-                {
-                    if (i == y-1)
-                        testview.setBackgroundResource(R.drawable.course_bottom_center);
-                    else
-                        testview.setBackgroundResource(R.drawable.course_normal_center);
-                }
-                tablerow.addView(testview, new TableRow.LayoutParams(TableRow.LayoutParams.MATCH_PARENT, TableRow.LayoutParams.MATCH_PARENT));
-            }
-            table.addView(tablerow);
-        }
-    }
-
     public void addScore() {
         TableLayout table = (TableLayout) findViewById(R.id.tablelayout);
         TableLayout table2 = (TableLayout) findViewById(R.id.tablelayout2);
@@ -4815,7 +5168,9 @@ public class MainActivity extends ActionBarActivity {
 
     String get_url_contents( String url , List<NameValuePair> params , CookieStore cookieStore ) {
         try {
-            HttpClient client = new DefaultHttpClient();
+            HttpParams httpParameters = new BasicHttpParams();
+            HttpConnectionParams.setConnectionTimeout(httpParameters, TIME_OUT);
+            HttpClient client = new DefaultHttpClient(httpParameters);
             client.getParams().setParameter(CoreProtocolPNames.USER_AGENT, USER_AGENT);
             HttpResponse response = null;
 
@@ -4840,7 +5195,9 @@ public class MainActivity extends ActionBarActivity {
     }
     String post_url_contents( String url, List<NameValuePair> params , CookieStore cookieStore ) {
         try {
-            HttpClient client = new DefaultHttpClient();
+            HttpParams httpParameters = new BasicHttpParams();
+            HttpConnectionParams.setConnectionTimeout(httpParameters, TIME_OUT);
+            HttpClient client = new DefaultHttpClient(httpParameters);
             client.getParams().setParameter(CoreProtocolPNames.USER_AGENT, USER_AGENT);
             HttpPost mHttpPost = new HttpPost(url);
             HttpResponse response = null;
@@ -4866,20 +5223,6 @@ public class MainActivity extends ActionBarActivity {
         return "";
     }
     String getStringFromInputStream(InputStream in) {
-        /*
-        byte[] data = new byte[102400];
-        int length;
-        if( in == null )
-            return null;
-        ByteArrayOutputStream mByteArrayOutputStream = new ByteArrayOutputStream();
-        try {
-            while( (length = in.read(data)) != -1 )
-                mByteArrayOutputStream.write(data, 0, length);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return new String(mByteArrayOutputStream.toByteArray());
-        */
         StringBuffer buffer = new StringBuffer();
         try {
             InputStreamReader inputStreamReader = new InputStreamReader(in, "utf-8");
@@ -4950,7 +5293,7 @@ public class MainActivity extends ActionBarActivity {
         SharedPreferences setting = getSharedPreferences("KUAS AP", 0);
         String username = setting.getString("User", "");
         String password = setting.getString("Pwd", "");
-        Boolean remember = setting.getBoolean("Remember", true);
+        Boolean remember = setting.getBoolean("Remember", false);
         news_id = setting.getInt("news_id", -1);
         UserNameEditText.setText(username);
         PasswordEditText.setText(password);
@@ -5037,28 +5380,112 @@ public class MainActivity extends ActionBarActivity {
         return builder;
     }
 
+    private class _AsyncTask extends AsyncTask {
+        @Override
+        protected Object doInBackground(Object... arg0) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Object result) {
+            super.onPostExecute(result);
+            switch (LayoutId)
+            {
+                case R.layout.simcourse:
+                    addSimCourse();
+                    break;
+                case R.layout.simcourse_search:
+                    break;
+                case R.layout.score:
+                    addScore();
+                    break;
+                case R.layout.course:
+                    addCourse();
+                    break;
+                case R.layout.offlinecourse:
+                    addOfflineCourse();
+                    break;
+                case R.layout.leave:
+                    addLeave();
+                    break;
+            }
+        }
+    }
+
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) { }
         else { }
-        if (_fncid.equals("AG222") && !LoadingDialog.isShowing() && !isSelecting)
+
+        if (LoadingDialogIsShow)
+            return;
+
+        switch (LayoutId)
         {
-            if (isOfflineCourse)
-                addOfflineCourse();
-            else
-                addCourse();
+            case R.layout.course:
+            case R.layout.offlinecourse:
+                if (!isSelecting)
+                {
+                    if (isOfflineCourse)
+                        addOfflineCourse();
+                    else
+                        addCourse();
+                }
+                break;
+            case R.layout.leave:
+                if (!isSelecting
+                        && ((ViewFlipper) findViewById(R.id.view_flipper2)).getDisplayedChild() == 0)
+                    addLeave();
+                break;
+            case R.layout.about:
+                if (AboutEasterEgg < 5)
+                    initAboutPathView();
+                break;
+            case R.layout.simcourse:
+                addSimCourse();
+                break;
+            case R.layout.logout:
+            case R.layout.logout_news:
+                initLogout();
+                break;
+            default:
+                break;
         }
-        else if (_fncid.equals("AK002") && !LoadingDialog.isShowing() && !isSelecting)
-            addLeave();
-        else if (_fncid.equals("about"))
+    }
+
+    private boolean isPackageAvailable(String packageName){
+        final PackageManager packageManager = getPackageManager();
+        List<PackageInfo> pinfo = packageManager.getInstalledPackages(0);
+        List<String> pName = new ArrayList<>();
+        if(pinfo != null){
+            for(int i = 0; i < pinfo.size(); i++){
+                String pn = pinfo.get(i).packageName;
+                pName.add(pn);
+            }
+        }
+        return pName.contains(packageName);
+    }
+
+    private void setContentViewEx(int _layoutID)
+    {
+        LayoutId = _layoutID;
+
+        if (_layoutID == R.layout.login)
+            LoadingDialogTitle = "Login";
+        else
+            LoadingDialogTitle = "Loading...";
+
+        switch (_layoutID)
         {
-            if (AboutEasterEgg < 5)
-                initAboutPathView();
+            case R.layout.course:
+            case R.layout.score:
+            case R.layout.leave:
+                SelectLayoutId = _layoutID;
+                break;
         }
-        else if (_fncid.equals("SimCourse"))
-            addSimCourse();
+        setContentView(_layoutID);
     }
 
     @Override
